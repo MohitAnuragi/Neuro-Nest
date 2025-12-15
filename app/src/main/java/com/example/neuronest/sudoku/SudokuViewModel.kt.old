@@ -1,0 +1,320 @@
+package com.example.neuronest.sudoku
+
+import androidx.lifecycle.ViewModel
+import com.example.neuronest.puzzlelevels.LevelManager
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+import kotlin.math.sqrt
+
+data class UserProfile(
+    val username: String = "Player",
+    val gamesPlayed: Int = 0,
+    val gamesWon: Int = 0,
+    val totalTimePlayed: Long = 0, // in seconds
+    val bestTime: Map<String, Long> = mapOf("easy" to 0L, "medium" to 0L, "hard" to 0L),
+    val hintsUsed: Int = 0,
+    val currentStreak: Int = 0,
+    val maxStreak: Int = 0
+)
+
+class SudokuViewModel : ViewModel() {
+    private val _uiState = MutableStateFlow(SudokuUiState())
+    val uiState: StateFlow<SudokuUiState> = _uiState.asStateFlow()
+    private val generator = SudokuGenerator()
+
+    private val _userProfile = MutableStateFlow(UserProfile())
+    val userProfile: StateFlow<UserProfile> = _userProfile.asStateFlow()
+
+    private var gameStartTime: Long = 0L
+    var currentLevel: Int = 1
+        private set
+
+    init {
+        setLevel(1) // Start with level 1
+    }
+
+    /**
+     * Sets the current level and loads appropriate puzzle
+     */
+    fun setLevel(level: Int) {
+        currentLevel = level
+        loadPuzzleForLevel(level)
+    }
+
+    /**
+     * Loads a puzzle based on the current level
+     */
+    fun loadPuzzleForLevel(level: Int) {
+        val difficulty = when {
+            level <= 10 -> "easy"
+            level <= 30 -> "medium"
+            else -> "hard"
+        }
+
+        val size = when {
+            level <= 15 -> 4
+            level <= 35 -> 6
+            else -> 9
+        }
+
+        val clues = when (difficulty) {
+            "easy" -> 8 - (level / 3).coerceAtLeast(4) // Fewer clues as level increases
+            "medium" -> 25 - (level / 2).coerceAtLeast(8)
+            "hard" -> 35 - level.coerceAtLeast(15)
+            else -> 8
+        }
+
+        val newGrid = generator.generatePuzzle(size, clues)
+        _uiState.update { currentState ->
+            currentState.copy(
+                difficulty = difficulty,
+                grid = newGrid,
+                initialGrid = newGrid,
+                size = size,
+                message = "Level $level - $difficulty",
+                isSolved = false,
+                selectedCell = null,
+                errors = emptySet()
+            )
+        }
+        gameStartTime = System.currentTimeMillis()
+    }
+
+    /**
+     * Selects a cell for input.
+     */
+    fun selectCell(row: Int, col: Int) {
+        if (uiState.value.isSolved || uiState.value.initialGrid[row][col] != 0) {
+            return
+        }
+        _uiState.update { it.copy(selectedCell = Pair(row, col)) }
+    }
+
+    /**
+     * Clears the selected cell.
+     */
+    fun clearSelectedCell() {
+        _uiState.update { it.copy(selectedCell = null) }
+    }
+
+    /**
+     * Handles the user entering text into a grid cell.
+     */
+    fun onCellValueChange(row: Int, col: Int, value: String) {
+        if (uiState.value.isSolved || uiState.value.initialGrid[row][col] != 0) {
+            return
+        }
+
+        // Validate input: must be a single digit and within the puzzle's range.
+        val number = value.toIntOrNull()
+        if (value.isNotEmpty() && (number == null || number !in 1..uiState.value.size)) {
+            _uiState.update { it.copy(message = "Invalid input! Please enter a digit from 1 to ${uiState.value.size}.") }
+            return
+        }
+
+        // Create a temporary grid with the new number
+        val newGrid = uiState.value.grid.map { it.toMutableList() }.toMutableList()
+        newGrid[row][col] = number ?: 0
+
+        // Check for errors
+        val errors = findErrors(newGrid.map { it.toList() })
+
+        // Update the state
+        _uiState.update {
+            it.copy(
+                grid = newGrid.map { it.toList() },
+                errors = errors,
+                message = if (number == null) "Cell cleared!" else "Cell updated."
+            )
+        }
+
+        // Check for solution and complete level
+        if (isSolved(newGrid.map { it.toList() })) {
+            val completionTime = (System.currentTimeMillis() - gameStartTime) / 1000
+            updateProfileOnWin(completionTime)
+            LevelManager.completeLevel("Sudoku", currentLevel)
+            _uiState.update {
+                it.copy(
+                    isSolved = true,
+                    message = "Level $currentLevel Complete! Time: ${completionTime}s"
+                )
+            }
+        }
+    }
+
+    /**
+     * Finds all cells with errors (duplicates in row, column, or subgrid).
+     */
+    private fun findErrors(grid: List<List<Int>>): Set<Pair<Int, Int>> {
+        val errors = mutableSetOf<Pair<Int, Int>>()
+        val size = grid.size
+        val subgridSize = sqrt(size.toDouble()).toInt()
+
+        // Check rows and columns
+        for (i in 0 until size) {
+            val rowValues = mutableMapOf<Int, MutableList<Int>>()
+            val colValues = mutableMapOf<Int, MutableList<Int>>()
+
+            for (j in 0 until size) {
+                // Check row for duplicates
+                if (grid[i][j] != 0) {
+                    if (rowValues.containsKey(grid[i][j])) {
+                        rowValues[grid[i][j]]?.add(j)
+                        errors.add(Pair(i, j))
+                        rowValues[grid[i][j]]?.forEach { errors.add(Pair(i, it)) }
+                    } else {
+                        rowValues[grid[i][j]] = mutableListOf(j)
+                    }
+                }
+
+                // Check column for duplicates
+                if (grid[j][i] != 0) {
+                    if (colValues.containsKey(grid[j][i])) {
+                        colValues[grid[j][i]]?.add(j)
+                        errors.add(Pair(j, i))
+                        colValues[grid[j][i]]?.forEach { errors.add(Pair(it, i)) }
+                    } else {
+                        colValues[grid[j][i]] = mutableListOf(j)
+                    }
+                }
+            }
+        }
+
+        // Check subgrids for duplicates
+        for (boxRow in 0 until subgridSize) {
+            for (boxCol in 0 until subgridSize) {
+                val subgridValues = mutableMapOf<Int, MutableList<Pair<Int, Int>>>()
+                for (row in 0 until subgridSize) {
+                    for (col in 0 until subgridSize) {
+                        val r = boxRow * subgridSize + row
+                        val c = boxCol * subgridSize + col
+                        val number = grid[r][c]
+                        if (number != 0) {
+                            if (subgridValues.containsKey(number)) {
+                                subgridValues[number]?.add(Pair(r, c))
+                                errors.add(Pair(r, c))
+                                subgridValues[number]?.forEach { errors.add(it) }
+                            } else {
+                                subgridValues[number] = mutableListOf(Pair(r, c))
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        return errors
+    }
+
+    /**
+     * Checks if the puzzle is completely filled and valid.
+     */
+    private fun isSolved(grid: List<List<Int>>): Boolean {
+        val size = grid.size
+        for (i in 0 until size) {
+            for (j in 0 until size) {
+                if (grid[i][j] == 0) return false
+            }
+        }
+        return findErrors(grid).isEmpty()
+    }
+
+    /**
+     * Provides a hint by filling in a random empty cell.
+     */
+    fun provideHint() {
+        if (uiState.value.isSolved) return
+
+        val emptyCells = mutableListOf<Pair<Int, Int>>()
+        for (i in 0 until uiState.value.size) {
+            for (j in 0 until uiState.value.size) {
+                if (uiState.value.grid[i][j] == 0 && uiState.value.initialGrid[i][j] == 0) {
+                    emptyCells.add(Pair(i, j))
+                }
+            }
+        }
+
+        if (emptyCells.isNotEmpty()) {
+            val (row, col) = emptyCells.random()
+            val solution = generator.generatePuzzle(uiState.value.size, uiState.value.size * uiState.value.size)
+            val correctValue = solution[row][col]
+
+            val newGrid = uiState.value.grid.map { it.toMutableList() }.toMutableList()
+            newGrid[row][col] = correctValue
+
+            // Update hint count in profile
+            _userProfile.update { profile ->
+                profile.copy(hintsUsed = profile.hintsUsed + 1)
+            }
+
+            _uiState.update {
+                it.copy(
+                    grid = newGrid.map { it.toList() },
+                    message = "Hint provided for cell (${row+1}, ${col+1})",
+                    errors = findErrors(newGrid.map { it.toList() })
+                )
+            }
+
+            if (isSolved(newGrid.map { it.toList() })) {
+                val completionTime = (System.currentTimeMillis() - gameStartTime) / 1000
+                updateProfileOnWin(completionTime)
+                LevelManager.completeLevel("Sudoku", currentLevel)
+                _uiState.update {
+                    it.copy(
+                        isSolved = true,
+                        message = "Level $currentLevel Complete! Time: ${completionTime}s"
+                    )
+                }
+            }
+        } else {
+            _uiState.update { it.copy(message = "No empty cells to provide a hint for!") }
+        }
+    }
+
+    /**
+     * Updates user profile when a game is won
+     */
+    private fun updateProfileOnWin(completionTime: Long) {
+        val difficulty = uiState.value.difficulty
+        _userProfile.update { profile ->
+            val currentBestTime = profile.bestTime[difficulty] ?: Long.MAX_VALUE
+            val newBestTime = if (currentBestTime == 0L || completionTime < currentBestTime) {
+                completionTime
+            } else {
+                currentBestTime
+            }
+
+            val newStreak = profile.currentStreak + 1
+            val newMaxStreak = maxOf(profile.maxStreak, newStreak)
+
+            profile.copy(
+                gamesPlayed = profile.gamesPlayed + 1,
+                gamesWon = profile.gamesWon + 1,
+                totalTimePlayed = profile.totalTimePlayed + completionTime,
+                bestTime = profile.bestTime + (difficulty to newBestTime),
+                currentStreak = newStreak,
+                maxStreak = newMaxStreak
+            )
+        }
+    }
+
+    /**
+     * Updates username in profile
+     */
+    fun updateUsername(newUsername: String) {
+        _userProfile.update { it.copy(username = newUsername) }
+    }
+
+    /**
+     * Gets current game time in seconds
+     */
+    fun getCurrentGameTime(): Long {
+        return if (!uiState.value.isSolved) {
+            (System.currentTimeMillis() - gameStartTime) / 1000
+        } else {
+            (System.currentTimeMillis() - gameStartTime) / 1000
+        }
+    }
+}

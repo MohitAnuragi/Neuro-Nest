@@ -1,0 +1,12 @@
+package com.example.neuronest.sudoku
+
+data class SudokuUiState(
+    val grid: List<List<Int>> = emptyList(),
+    val initialGrid: List<List<Int>> = emptyList(),
+    val size: Int = 0,
+    val message: String = "Tap on a cell and type a number to begin!",
+    val isSolved: Boolean = false,
+    val difficulty: String = "easy",
+    val selectedCell: Pair<Int, Int>? = null,
+    val errors: Set<Pair<Int, Int>> = emptySet()
+)

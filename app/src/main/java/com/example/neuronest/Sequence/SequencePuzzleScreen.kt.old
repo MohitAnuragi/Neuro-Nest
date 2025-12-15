@@ -1,0 +1,489 @@
+package com.example.neuronest.Sequence
+
+import android.os.Bundle
+import android.speech.tts.TextToSpeech
+import android.widget.Toast
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.TileMode
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.neuronest.R
+import com.example.neuronest.speech.rememberTextToSpeech
+import kotlinx.coroutines.delay
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SequencePuzzleScreen(
+    onBack: () -> Unit = {},
+    onAnswerChecked: (isCorrect: Boolean) -> Unit = {},
+    level: Int,
+
+    ) {
+    val viewModel: SequencePuzzleViewModel = hiltViewModel()
+    val uiState by viewModel.uiState.collectAsState()
+    val (tts, isTtsInitialized) = rememberTextToSpeech()
+    val context = LocalContext.current
+
+    val ttsParams = remember {
+        Bundle().apply {
+            putFloat(TextToSpeech.Engine.KEY_PARAM_VOLUME, 1.0f)
+        }
+    }
+    val isCorrect by viewModel.isCorrect.collectAsState()
+
+    var isContentLoaded by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        delay(300)
+        isContentLoaded = true
+    }
+
+    // Speak feedback when answer is checked
+    LaunchedEffect(isCorrect) {
+        isCorrect?.let { correct ->
+            val message = if (correct) {
+                "Series completed! Try another one"
+            } else {
+                "Incorrect answer. Try again!"
+            }
+
+            if (isTtsInitialized) {
+                tts?.speak(message, TextToSpeech.QUEUE_FLUSH, ttsParams, null)
+            } else {
+                Toast.makeText(context, "Text-to-Speech not ready.", Toast.LENGTH_SHORT).show()
+            }
+            onAnswerChecked(correct)
+            viewModel.resetIsCorrectFlag()
+        }
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Text(
+                        "Number Sequence",
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold
+                    )
+                },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            imageVector = Icons.Default.ArrowBack,
+                            contentDescription = "Back",
+                            tint = Color.White
+                        )
+                    }
+                },
+                actions = {
+//                    // Music control
+//                    IconButton(onClick = { onToggleMusic(!isMusicPlaying) }) {
+//                        Icon(
+//                            imageVector = if (isMusicPlaying) Icons.Default.MusicNote else Icons.Default.MusicOff,
+//                            contentDescription = "Toggle Music",
+//                            tint = Color.White
+//                        )
+//                    }
+
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color(0xFF2C1810),
+                    titleContentColor = Color.White,
+                    actionIconContentColor = Color.White
+                )
+            )
+        }
+    ) { innerPadding ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+        ) {
+            // Wood textured background
+            Image(
+                painter = painterResource(id = R.drawable.wood_texture),
+                contentDescription = "Wood background",
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
+            )
+
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(24.dp)
+            ) {
+                // Score display
+                ScoreDisplay(score = uiState.userAnswer, isContentLoaded = isContentLoaded)
+
+                // Title
+//                Text(
+//                    text = "Number Sequence",
+//                    fontSize = 28.sp,
+//                    fontWeight = FontWeight.Bold,
+//                    color = Color.White,
+//                    modifier = Modifier.scale(animateFloatAsState(
+//                        targetValue = if (isContentLoaded) 1f else 0.9f,
+//                        animationSpec = androidx.compose.animation.core.tween(durationMillis = 600)
+//                    ).value)
+//                )
+
+                // Sequence display
+                SequenceDisplay(
+                    sequence = uiState.sequence,
+                    isContentLoaded = isContentLoaded
+                )
+
+                // Feedback
+                if (uiState.feedback.isNotEmpty()) {
+                    FeedbackMessage(
+                        feedback = uiState.feedback,
+                        isCorrect = uiState.feedback.startsWith("Correct"),
+                        isContentLoaded = isContentLoaded
+                    )
+                }
+
+                // Answer input
+                AnswerInput(
+                    value = uiState.userAnswer,
+                    onValueChange = { viewModel.updateUserAnswer(it) },
+                    isContentLoaded = isContentLoaded
+                )
+
+                // Action buttons
+                ActionButtons(
+                    userAnswer = uiState.userAnswer,
+                    isContentLoaded = isContentLoaded,
+                    onSubmit = { viewModel.checkAnswer(uiState.userAnswer) },
+                    onNext = {
+                        viewModel.skipPuzzle()
+                        if (isTtsInitialized) {
+                            tts?.speak("Please complete this series", TextToSpeech.QUEUE_FLUSH, ttsParams, null)
+                        }
+                    }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun ScoreDisplay(score: String, isContentLoaded: Boolean) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(60.dp)
+            .scale(animateFloatAsState(
+                targetValue = if (isContentLoaded) 1f else 0.8f,
+                animationSpec = androidx.compose.animation.core.tween(durationMillis = 600)
+            ).value)
+            .background(
+                color = Color(0xFF2C1810),
+                shape = RoundedCornerShape(12.dp)
+            )
+            .border(
+                width = 2.dp,
+                brush = Brush.linearGradient(
+                    colors = listOf(Color(0xFFD4AF37), Color(0xFFFFD700)),
+                    tileMode = TileMode.Repeated
+                ),
+                shape = RoundedCornerShape(12.dp)
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = "Score: $score",
+            color = Color.White,
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold,
+            letterSpacing = 1.sp
+        )
+    }
+}
+
+@Composable
+fun SequenceDisplay(sequence: List<Int>, isContentLoaded: Boolean) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .scale(animateFloatAsState(
+                targetValue = if (isContentLoaded) 1f else 0.9f,
+                animationSpec = androidx.compose.animation.core.tween(durationMillis = 600, delayMillis = 100)
+            ).value)
+            .shadow(
+                elevation = 16.dp,
+                shape = RoundedCornerShape(16.dp),
+                spotColor = Color(0xFFFFD700)
+            ),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    brush = Brush.linearGradient(
+                        colors = listOf(Color(0xFF2C1810), Color(0xFF4A2C1D)),
+                        tileMode = TileMode.Repeated
+                    )
+                )
+                .padding(24.dp)
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = "Complete the sequence:",
+                    fontSize = 18.sp,
+                    color = Color.White,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    sequence.forEachIndexed { index, number ->
+                        SequenceNumberBox(
+                            number = number,
+                            isContentLoaded = isContentLoaded,
+                            delay = index * 100
+                        )
+                    }
+                    SequenceNumberBox(
+                        number = null,
+                        isContentLoaded = isContentLoaded,
+                        delay = sequence.size * 100
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun SequenceNumberBox(number: Int?, isContentLoaded: Boolean, delay: Int = 0) {
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier
+            .size(70.dp)
+            .scale(animateFloatAsState(
+                targetValue = if (isContentLoaded) 1f else 0.8f,
+                animationSpec = androidx.compose.animation.core.tween(durationMillis = 400, delayMillis = delay)
+            ).value)
+            .shadow(
+                elevation = 8.dp,
+                shape = RoundedCornerShape(12.dp),
+                spotColor = if (number != null) Color(0xFFFFD700) else Color.Gray
+            )
+            .clip(RoundedCornerShape(12.dp))
+            .background(
+                color = if (number != null) Color(0x552C1810) else Color(0x33FFFFFF)
+            )
+            .border(
+                width = 2.dp,
+                brush = Brush.linearGradient(
+                    colors = listOf(Color(0xFFFFD700), Color(0xFFD4AF37)),
+                    tileMode = TileMode.Repeated
+                ),
+                shape = RoundedCornerShape(12.dp)
+            )
+    ) {
+        Text(
+            text = number?.toString() ?: "?",
+            fontSize = 24.sp,
+            fontWeight = FontWeight.Bold,
+            color = if (number != null) Color(0xFFFFD700) else Color(0xAAFFFFFF)
+        )
+    }
+}
+
+@Composable
+fun FeedbackMessage(feedback: String, isCorrect: Boolean, isContentLoaded: Boolean) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(60.dp)
+            .scale(animateFloatAsState(
+                targetValue = if (isContentLoaded) 1f else 0.8f,
+                animationSpec = androidx.compose.animation.core.tween(durationMillis = 600, delayMillis = 200)
+            ).value)
+            .background(
+                color = if (isCorrect) Color(0x5510B981) else Color(0x55EF4444),
+                shape = RoundedCornerShape(12.dp)
+            )
+            .border(
+                width = 2.dp,
+                brush = Brush.linearGradient(
+                    colors = if (isCorrect) {
+                        listOf(Color(0xFF10B981), Color(0xFF34D399))
+                    } else {
+                        listOf(Color(0xFFEF4444), Color(0xFFF87171))
+                    },
+                    tileMode = TileMode.Repeated
+                ),
+                shape = RoundedCornerShape(12.dp)
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = feedback,
+            fontSize = 16.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = if (isCorrect) Color(0xFF065F46) else Color(0xFF991B1B)
+        )
+    }
+}
+
+@Composable
+fun AnswerInput(value: String, onValueChange: (String) -> Unit, isContentLoaded: Boolean) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .scale(animateFloatAsState(
+                targetValue = if (isContentLoaded) 1f else 0.9f,
+                animationSpec = androidx.compose.animation.core.tween(durationMillis = 600, delayMillis = 300)
+            ).value)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    color = Color(0xFF2C1810),
+                    shape = RoundedCornerShape(12.dp)
+                )
+                .border(
+                    width = 2.dp,
+                    brush = Brush.linearGradient(
+                        colors = listOf(Color(0xFFD4AF37), Color(0xFFFFD700)),
+                        tileMode = TileMode.Repeated
+                    ),
+                    shape = RoundedCornerShape(12.dp)
+                )
+                .padding(4.dp)
+        ) {
+            BasicTextField(
+                value = value,
+                onValueChange = { newValue ->
+                    // Only allow numeric input
+                    if (newValue.isEmpty() || newValue.all { it.isDigit() }) {
+                        onValueChange(newValue)
+                    }
+                },
+                textStyle = TextStyle(
+                    color = Color.White,
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center
+                ),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(60.dp)
+                    .padding(horizontal = 16.dp),
+                singleLine = true,
+                decorationBox = { innerTextField ->
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        if (value.isEmpty()) {
+                            Text(
+                                text = "Enter the next number",
+                                color = Color(0xFFD4AF37).copy(alpha = 0.7f),
+                                fontSize = 18.sp,
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                        innerTextField()
+                    }
+                }
+            )
+        }
+    }
+}
+
+@Composable
+fun ActionButtons(
+    userAnswer: String,
+    isContentLoaded: Boolean,
+    onSubmit: () -> Unit,
+    onNext: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .scale(animateFloatAsState(
+                targetValue = if (isContentLoaded) 1f else 0.9f,
+                animationSpec = androidx.compose.animation.core.tween(durationMillis = 600, delayMillis = 400)
+            ).value),
+        horizontalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        // Submit button
+        Button(
+            onClick = onSubmit,
+            modifier = Modifier.weight(1f),
+            enabled = userAnswer.isNotEmpty(),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Color(0xFFD4AF37),
+                contentColor = Color.White
+            ),
+            elevation = ButtonDefaults.buttonElevation(
+                defaultElevation = 8.dp,
+                pressedElevation = 4.dp
+            )
+        ) {
+            Text(
+                "SUBMIT",
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
+
+        // Next puzzle button
+        Button(
+            onClick = onNext,
+            modifier = Modifier.weight(1f),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Color(0xFF2C1810),
+                contentColor = Color.White
+            ),
+            elevation = ButtonDefaults.buttonElevation(
+                defaultElevation = 8.dp,
+                pressedElevation = 4.dp
+            )
+        ) {
+            Text(
+                "NEXT PUZZLE",
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
+    }
+}

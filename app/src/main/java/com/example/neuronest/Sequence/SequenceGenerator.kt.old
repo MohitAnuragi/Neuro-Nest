@@ -1,0 +1,74 @@
+package com.example.neuronest.Sequence
+
+import kotlin.random.Random
+
+object SequenceGenerator {
+    fun generatePuzzle(): SequencePuzzle {
+        return when (Random.nextInt(0, 5)) {
+            0 -> generateArithmeticSequence()
+            1 -> generateGeometricSequence()
+            2 -> generateFibonacciSequence()
+            3 -> generateSquareSequence()
+            else -> generatePrimeSequence()
+        }
+    }
+
+    private fun generateArithmeticSequence(): SequencePuzzle {
+        val step = Random.nextInt(1, 10)
+        val start = Random.nextInt(1, 20)
+        val length = 5
+        val sequence = List(length) { start + it * step }
+        return SequencePuzzle(
+            sequence = sequence.dropLast(1),
+            answer = sequence.last()
+        )
+    }
+
+    private fun generateGeometricSequence(): SequencePuzzle {
+        val ratio = Random.nextInt(2, 10)
+        val start = Random.nextInt(1, 50)
+        val length = 5
+        val sequence = List(length) { start * Math.pow(ratio.toDouble(), it.toDouble()).toInt() }
+        return SequencePuzzle(
+            sequence = sequence.dropLast(1),
+            answer = sequence.last()
+        )
+    }
+
+    private fun generateFibonacciSequence(): SequencePuzzle {
+        val length = 5
+        val sequence = mutableListOf(1, 1)
+        for (i in 2 until length) {
+            sequence.add(sequence[i-1] + sequence[i-2])
+        }
+        return SequencePuzzle(
+            sequence = sequence.dropLast(1),
+            answer = sequence.last()
+        )
+    }
+
+    private fun generateSquareSequence(): SequencePuzzle {
+        val start = Random.nextInt(1, 10)
+        val length = 5
+        val sequence = List(length) { (start + it) * (start + it) }
+        return SequencePuzzle(
+            sequence = sequence.dropLast(1),
+            answer = sequence.last()
+        )
+    }
+
+    private fun generatePrimeSequence(): SequencePuzzle {
+        val primes = listOf(2, 3, 5, 7, 11, 13, 17, 19, 23, 29)
+        val startIndex = Random.nextInt(0, primes.size)
+        val sequence = primes.subList(startIndex, startIndex + 5)
+        return SequencePuzzle(
+            sequence = sequence.dropLast(1),
+            answer = sequence.last()
+        )
+    }
+}
+
+data class SequencePuzzle(
+    val sequence: List<Int>,
+    val answer: Int
+)
