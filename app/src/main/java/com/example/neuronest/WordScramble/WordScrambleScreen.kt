@@ -6,6 +6,8 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -30,6 +32,12 @@ import com.example.neuronest.puzzlelevels.LevelCompleteDialog
 import com.example.neuronest.puzzlelevels.LevelProgressBar
 import com.example.neuronest.puzzlelevels.PuzzleTimer
 import kotlinx.coroutines.delay
+
+data class LetterItem(
+    val letter: Char,
+    val id: Int,
+    val isUsed: Boolean = false
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -58,6 +66,19 @@ fun WordScrambleScreen(
     val isTimerRunning by viewModel.isTimerRunning.collectAsState()
     val elapsedTime by viewModel.elapsedTimeMs.collectAsState()
     val levelProgress by viewModel.levelProgress.collectAsState()
+
+    // Letter state management
+    var letterItems by remember { mutableStateOf<List<LetterItem>>(emptyList()) }
+    var usedLetterIds by remember { mutableStateOf<List<Int>>(emptyList()) }
+
+    // Update letter items when scrambled word changes
+    LaunchedEffect(scrambledWord) {
+        letterItems = scrambledWord.mapIndexed { index, char ->
+            LetterItem(letter = char, id = index, isUsed = false)
+        }
+        usedLetterIds = emptyList()
+        viewModel.clearAnswer()
+    }
 
     var isContentLoaded by remember { mutableStateOf(false) }
 
@@ -154,9 +175,16 @@ fun WordScrambleScreen(
                 )
 
                 LetterButtons(
-                    scrambledWord = scrambledWord,
-                    onLetterClick = { letter ->
-                        viewModel.addLetter(letter)
+                    letterItems = letterItems,
+                    onLetterClick = { letterId ->
+                        val letter = letterItems.find { it.id == letterId }?.letter
+                        if (letter != null) {
+                            viewModel.addLetter(letter)
+                            usedLetterIds = usedLetterIds + letterId
+                            letterItems = letterItems.map {
+                                if (it.id == letterId) it.copy(isUsed = true) else it
+                            }
+                        }
                     }
                 )
 
@@ -165,7 +193,12 @@ fun WordScrambleScreen(
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     OutlinedButton(
-                        onClick = { viewModel.clearAnswer() },
+                        onClick = {
+                            viewModel.clearAnswer()
+                            // Reset all letters to unused
+                            letterItems = letterItems.map { it.copy(isUsed = false) }
+                            usedLetterIds = emptyList()
+                        },
                         modifier = Modifier
                             .weight(1f)
                             .height(56.dp),
@@ -177,7 +210,17 @@ fun WordScrambleScreen(
                     }
 
                     OutlinedButton(
-                        onClick = { viewModel.removeLetter() },
+                        onClick = {
+                            if (usedLetterIds.isNotEmpty()) {
+                                viewModel.removeLetter()
+                                // Restore the last used letter
+                                val lastUsedId = usedLetterIds.last()
+                                letterItems = letterItems.map {
+                                    if (it.id == lastUsedId) it.copy(isUsed = false) else it
+                                }
+                                usedLetterIds = usedLetterIds.dropLast(1)
+                            }
+                        },
                         modifier = Modifier
                             .weight(1f)
                             .height(56.dp),
@@ -299,28 +342,31 @@ fun ScrambledWordDisplay(scrambledWord: String, isContentLoaded: Boolean) {
 
 @Composable
 fun LetterButtons(
-    scrambledWord: String,
-    onLetterClick: (Char) -> Unit
+    letterItems: List<LetterItem>,
+    onLetterClick: (Int) -> Unit
 ) {
-    Row(
+    LazyRow(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)
+        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+        contentPadding = PaddingValues(horizontal = 4.dp)
     ) {
-        scrambledWord.forEach { letter ->
+        items(letterItems, key = { it.id }) { letterItem ->
             Button(
-                onClick = { onLetterClick(letter) },
+                onClick = { onLetterClick(letterItem.id) },
+                enabled = !letterItem.isUsed,
                 modifier = Modifier
                     .size(56.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFF2C1810)
+                    containerColor = if (letterItem.isUsed) Color(0xFF666666) else Color(0xFF2C1810),
+                    disabledContainerColor = Color(0xFF666666)
                 ),
                 shape = RoundedCornerShape(12.dp)
             ) {
                 Text(
-                    text = letter.toString(),
+                    text = letterItem.letter.toString(),
                     fontSize = 24.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color.White
+                    color = if (letterItem.isUsed) Color(0xFF999999) else Color.White
                 )
             }
         }

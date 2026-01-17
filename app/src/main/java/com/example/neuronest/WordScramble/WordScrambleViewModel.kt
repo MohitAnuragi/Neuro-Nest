@@ -35,6 +35,7 @@ class WordScrambleViewModel @Inject constructor(
     private val _isCorrect = MutableStateFlow<Boolean?>(null)
     val isCorrect: StateFlow<Boolean?> = _isCorrect.asStateFlow()
 
+
     private var puzzleStartTime: Long = 0
 
     init {
@@ -42,7 +43,8 @@ class WordScrambleViewModel @Inject constructor(
     }
 
     override fun onLevelLoaded(level: Int) {
-        generateNewWord()
+        // Load the data-driven puzzle(s) for this level
+        loadPuzzleForLevel(level)
         puzzleStartTime = System.currentTimeMillis()
     }
 
@@ -100,7 +102,8 @@ class WordScrambleViewModel @Inject constructor(
             onProblemSolved(timeTaken, pointsEarned)
 
             if (!_isLevelComplete.value) {
-                generateNewWord()
+                // Load next puzzle within same level (problemsRequired)
+                loadPuzzleForLevel(_currentLevel.value)
                 _userAnswer.value = ""
             }
         } else {
@@ -117,15 +120,21 @@ class WordScrambleViewModel @Inject constructor(
         _isCorrect.value = null
         soundManager.playSound(SoundType.TRANSITION)
 
-        generateNewWord()
+        loadPuzzleForLevel(_currentLevel.value)
         _userAnswer.value = ""
     }
 
-    fun generateNewWord() {
-        val level = _currentLevel.value
-        val wordList = getWordsForLevel(level)
-        _currentWord.value = wordList.random()
-        _scrambledWord.value = scrambleWord(_currentWord.value)
+    private fun loadPuzzleForLevel(level: Int) {
+        // Use the data file to load puzzles based on the current level and progress within the level
+        // For each call (problemsRequired times), we will pick entries deterministically based on level and solveCount
+        val puzzleIndexBase = (level - 1) * problemsRequired
+        // use the protected 'problemsSolved' from BasePuzzleViewModel (no underscore)
+        val pickIndex = (puzzleIndexBase + (problemsSolved % problemsRequired)) % WordScramblePuzzleData.puzzles.size
+        val puzzle = WordScramblePuzzleData.puzzles[pickIndex]
+
+        _currentWord.value = puzzle.correctWord.uppercase()
+        // If the data provided scrambledWord is empty, generate one safely
+        _scrambledWord.value = if (puzzle.scrambledWord.isNotBlank()) puzzle.scrambledWord.uppercase() else scrambleWord(_currentWord.value)
         _feedback.value = ""
         _isCorrect.value = null
         puzzleStartTime = System.currentTimeMillis()
@@ -140,16 +149,6 @@ class WordScrambleViewModel @Inject constructor(
             attempts++
         }
         return scrambled
-    }
-
-    private fun getWordsForLevel(level: Int): List<String> {
-        return when {
-            level <= 50 -> easyWords
-            level <= 100 -> mediumWords
-            level <= 200 -> hardWords
-            level <= 300 -> expertWords
-            else -> masterWords
-        }
     }
 
     private fun getDifficultyForLevel(level: Int): String {
@@ -189,41 +188,4 @@ class WordScrambleViewModel @Inject constructor(
     fun resetIsCorrectFlag() {
         _isCorrect.value = null
     }
-
-    // Word banks categorized by difficulty
-    private val easyWords = listOf(
-        "CAT", "DOG", "FISH", "BIRD", "TREE", "SUN", "MOON", "STAR", "BOOK", "DOOR",
-        "BALL", "CAKE", "MILK", "HOME", "RAIN", "SNOW", "WIND", "FIRE", "JUMP", "PLAY",
-        "HAND", "FOOT", "HEAD", "EYES", "NOSE", "EARS", "HAIR", "BABY", "MAMA", "PAPA",
-        "ROSE", "LEAF", "SEED", "BOAT", "KITE", "LOCK", "KEYS", "SALT", "MILK", "EGGS"
-    )
-
-    private val mediumWords = listOf(
-        "APPLE", "BREAD", "CHAIR", "DANCE", "EAGLE", "FRUIT", "GRAPE", "HAPPY", "JUNGLE", "KOALA",
-        "LEMON", "MAGIC", "NIGHT", "OCEAN", "PANDA", "QUEEN", "RIVER", "SMILE", "TIGER", "UNIQUE",
-        "VIOLIN", "WATER", "YELLOW", "ZEBRA", "BRIGHT", "CLOUD", "DRAGON", "FOREST", "GARDEN", "HORSE",
-        "ISLAND", "JACKET", "KITTEN", "LAPTOP", "MONKEY", "NUMBER", "ORANGE", "PLANET", "RABBIT", "STORM"
-    )
-
-    private val hardWords = listOf(
-        "ADVENTURE", "BEAUTIFUL", "CHALLENGE", "DANGEROUS", "EDUCATION", "FANTASTIC", "GEOGRAPHY", "HAPPINESS",
-        "IMPORTANT", "KNOWLEDGE", "LIGHTNING", "MOUNTAINS", "NEWSPAPER", "ORGANIZED", "PRESIDENT", "QUESTION",
-        "RECOGNIZE", "SOMETHING", "TRANSPORT", "UNDERSTANDING", "WONDERFUL", "BUTTERFLY", "CELEBRATE", "DIFFERENT",
-        "EMERGENCY", "FURNITURE", "GUARDIANS", "HURRICANE", "INTERFACE", "JELLYFISH", "KANGAROO", "LANDSCAPE"
-    )
-
-    private val expertWords = listOf(
-        "ACCOMPLISH", "BACKGROUND", "CALCULABLE", "DICTIONARY", "EXCITEMENT", "FASCINATING", "GOVERNMENT",
-        "HAMBURGERS", "INCREDIBLE", "JOURNALISM", "KINDERGARTEN", "LABORATORY", "MAGNIFICENT", "NEGOTIATE",
-        "OCCUPATION", "PERSONALITY", "QUICKSILVER", "RESTAURANT", "STRAWBERRY", "TEMPERATURE", "UNDERSTAND",
-        "VOCABULARY", "WATERMELON", "XYLOPHONE", "YESTERDAY", "ZOOLOGICAL", "ATMOSPHERE", "BASKETBALL"
-    )
-
-    private val masterWords = listOf(
-        "ACCOMPLISHMENT", "BREAKTHROUGH", "CATASTROPHIC", "DETERMINATION", "EXTRAORDINARY", "FUNDAMENTALLY",
-        "GROUNDBREAKING", "HUMANITARIAN", "INFRASTRUCTURE", "KINDERGARTEN", "LABYRINTHINE", "MANIFESTATION",
-        "NEVERTHELESS", "OPTIMIZATION", "PHILOSOPHICAL", "QUINTESSENTIAL", "REVOLUTIONARY", "SOPHISTICATED",
-        "TRANSFORMATION", "UNCONDITIONAL", "VISUALIZATION", "ACKNOWLEDGMENT", "BIODEGRADABLE", "CIRCUMSTANTIAL"
-    )
 }
-

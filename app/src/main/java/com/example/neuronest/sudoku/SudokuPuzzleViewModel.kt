@@ -42,15 +42,14 @@ class SudokuPuzzleViewModel @Inject constructor(
     val feedback: StateFlow<String> = _feedback.asStateFlow()
 
     private var solutionGrid: List<List<Int>> = emptyList()
-    private val generator = SudokuGenerator()
     private var puzzleStartTime: Long = 0
 
     init {
-        problemsRequired = 3 // 3 puzzles per level like Arithmetic
+        problemsRequired = 3 // 3 Sudoku puzzles per level
     }
 
     override fun onLevelLoaded(level: Int) {
-        generatePuzzle(level)
+        loadPuzzleForLevel(level)
         puzzleStartTime = System.currentTimeMillis()
     }
 
@@ -61,20 +60,17 @@ class SudokuPuzzleViewModel @Inject constructor(
         puzzleStartTime = System.currentTimeMillis()
     }
 
-    private fun generatePuzzle(level: Int) {
-        val (size, clues) = getDifficultyParams(level)
-        _gridSize.value = size
+    private fun loadPuzzleForLevel(level: Int) {
+        // Load puzzle from data based on level and current puzzle within level
+        val puzzleIndexBase = (level - 1) * problemsRequired
+        val pickIndex = (puzzleIndexBase + (problemsSolved % problemsRequired)) % SudokuPuzzleData.puzzles.size
+        val puzzleData = SudokuPuzzleData.puzzles[pickIndex]
 
-        // Generate a complete solution first
-        val completeSolution = MutableList(size) { MutableList(size) { 0 } }
-        generator.solveGrid(completeSolution, size)
-        solutionGrid = completeSolution.map { it.toList() }
-
-        // Create puzzle with clues
-        val puzzleGrid = generator.generatePuzzle(size, clues)
+        _gridSize.value = puzzleData.size
+        solutionGrid = puzzleData.solution
 
         // Convert to SudokuCell format
-        val cells = puzzleGrid.mapIndexed { _, row ->
+        val cells = puzzleData.puzzle.mapIndexed { _, row ->
             row.mapIndexed { _, value ->
                 SudokuCell(
                     value = value,
@@ -87,27 +83,10 @@ class SudokuPuzzleViewModel @Inject constructor(
 
         _grid.value = cells
         _feedback.value = ""
+        _selectedCell.value = null
         puzzleStartTime = System.currentTimeMillis()
     }
 
-    private fun getDifficultyParams(level: Int): Pair<Int, Int> {
-        return when {
-            // Levels 1-100: 4x4 grids (easy to medium)
-            level <= 50 -> Pair(4, 10)  // 4x4 with 10 clues
-            level <= 100 -> Pair(4, 8)   // 4x4 with 8 clues
-            // Levels 101-200: 6x6 grids (medium)
-            level <= 150 -> Pair(6, 20)  // 6x6 with 20 clues (not standard, but works)
-            level <= 200 -> Pair(6, 16)  // 6x6 with 16 clues
-            // Levels 201-300: 9x9 grids (medium to hard)
-            level <= 250 -> Pair(9, 40)  // 9x9 with 40 clues
-            level <= 300 -> Pair(9, 35)  // 9x9 with 35 clues
-            // Levels 301-400: 9x9 harder
-            level <= 350 -> Pair(9, 30)  // 9x9 with 30 clues
-            level <= 400 -> Pair(9, 27)  // 9x9 with 27 clues
-            // Levels 401-500: 9x9 expert
-            else -> Pair(9, 25)          // 9x9 with 25 clues
-        }
-    }
 
     fun selectCell(row: Int, col: Int) {
         if (_isLevelComplete.value) return
@@ -144,8 +123,9 @@ class SudokuPuzzleViewModel @Inject constructor(
         val newGrid = _grid.value.map { it.toMutableList() }.toMutableList()
         newGrid[row][col] = cell.copy(value = value, notes = emptySet())
 
-        // Validate the move
+        // Validate the move using generator
         val gridValues = newGrid.map { row -> row.map { it.value } }
+        val generator = SudokuGenerator()
         val isValidMove = generator.isValidMove(gridValues, row, col, value, _gridSize.value)
 
         if (isValidMove) {
@@ -164,8 +144,7 @@ class SudokuPuzzleViewModel @Inject constructor(
 
                 // Generate next puzzle if level not complete
                 if (!_isLevelComplete.value) {
-                    generatePuzzle(_currentLevel.value)
-                    _selectedCell.value = null
+                    loadPuzzleForLevel(_currentLevel.value)
                 }
             }
         } else {
@@ -204,8 +183,7 @@ class SudokuPuzzleViewModel @Inject constructor(
         onProblemSolved(0L, 0) // Skip gives no points
 
         if (!_isLevelComplete.value) {
-            generatePuzzle(_currentLevel.value)
-            _selectedCell.value = null
+            loadPuzzleForLevel(_currentLevel.value)
         }
     }
 
@@ -221,8 +199,7 @@ class SudokuPuzzleViewModel @Inject constructor(
             onProblemSolved(timeTaken, pointsEarned)
 
             if (!_isLevelComplete.value) {
-                generatePuzzle(_currentLevel.value)
-                _selectedCell.value = null
+                loadPuzzleForLevel(_currentLevel.value)
             }
         } else {
             _feedback.value = "Puzzle not complete or has errors!"
@@ -260,8 +237,7 @@ class SudokuPuzzleViewModel @Inject constructor(
 
             // Generate next puzzle if level not complete
             if (!_isLevelComplete.value) {
-                generatePuzzle(_currentLevel.value)
-                _selectedCell.value = null
+                loadPuzzleForLevel(_currentLevel.value)
             }
         }
     }
@@ -321,10 +297,5 @@ class SudokuPuzzleViewModel @Inject constructor(
             timeTakenMs < 300000 && hintsUsed <= 3 && score >= 400 -> 2
             else -> 1
         }
-    }
-
-    // Public method for generator (needed by screen)
-    fun isValidMove(grid: List<List<Int>>, row: Int, col: Int, number: Int): Boolean {
-        return generator.isValidMove(grid, row, col, number, _gridSize.value)
     }
 }

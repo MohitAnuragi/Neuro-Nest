@@ -16,6 +16,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
@@ -47,6 +48,7 @@ fun SudokuPuzzleScreen(
     onGoToGrid: () -> Unit = {}
 ) {
     val viewModel: SudokuPuzzleViewModel = hiltViewModel()
+    var showHowToPlay by rememberSaveable { mutableStateOf(true) }
 
     LaunchedEffect(level) {
         viewModel.loadLevel(level)
@@ -90,20 +92,20 @@ fun SudokuPuzzleScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { viewModel.showHint() }) {
-                        Icon(
-                            imageVector = Icons.Default.Lightbulb,
-                            contentDescription = "Hint",
-                            tint = Color(0xFFFFD700)
-                        )
-                    }
-                    IconButton(onClick = { viewModel.clearCell() }) {
-                        Icon(
-                            imageVector = Icons.Default.Delete,
-                            contentDescription = "Clear",
-                            tint = Color.White
-                        )
-                    }
+//                    IconButton(onClick = { viewModel.showHint() }) {
+//                        Icon(
+//                            imageVector = Icons.Default.Lightbulb,
+//                            contentDescription = "Hint",
+//                            tint = Color(0xFFFFD700)
+//                        )
+//                    }
+//                    IconButton(onClick = { viewModel.clearCell() }) {
+//                        Icon(
+//                            imageVector = Icons.Default.Delete,
+//                            contentDescription = "Clear",
+//                            tint = Color.White
+//                        )
+//                    }
                     PuzzleTimer(
                         isRunning = isTimerRunning,
                         onTimeUpdate = { timeMs ->
@@ -199,12 +201,12 @@ fun SudokuPuzzleScreen(
                 }
 
                 // Number input buttons
-                SudokuNumberPad(
-                    gridSize = gridSize,
-                    onNumberClick = { number ->
-                        viewModel.setCellValue(number)
-                    }
-                )
+//                SudokuNumberPad(
+//                    gridSize = gridSize,
+//                    onNumberClick = { number ->
+//                        viewModel.setCellValue(number)
+//                    }
+//                )
             }
         }
     }

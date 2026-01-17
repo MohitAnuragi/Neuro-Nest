@@ -1,4 +1,4 @@
-package com.example.neuronest.Arithematic
+package com.example.neuronest.connection
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -7,15 +7,21 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Lightbulb
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TileMode
@@ -34,26 +40,27 @@ import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ArithmeticPuzzleScreen(
+fun ConnectionPuzzleScreen(
     onBack: () -> Unit = {},
     level: Int = 1,
     onNextLevel: (Int) -> Unit = {},
     onReplay: () -> Unit = {},
     onGoToGrid: () -> Unit = {}
 ) {
-    val viewModel: ArithmeticViewModel = hiltViewModel()
+    val viewModel: ConnectionPuzzleViewModel = hiltViewModel()
 
-    // Load level when screen opens
     LaunchedEffect(level) {
         viewModel.loadLevel(level)
     }
 
     val currentLevel by viewModel.currentLevel.collectAsState()
     val score by viewModel.score.collectAsState()
-    val currentProblem by viewModel.currentProblem.collectAsState()
-    val userAnswer by viewModel.userAnswer.collectAsState()
+    val availableWords by viewModel.availableWords.collectAsState()
+    val selectedWords by viewModel.selectedWords.collectAsState()
+    val solvedCategories by viewModel.solvedCategories.collectAsState()
     val feedback by viewModel.feedback.collectAsState()
     val isCorrect by viewModel.isCorrect.collectAsState()
+    val mistakesRemaining by viewModel.mistakesRemaining.collectAsState()
     val showLevelComplete by viewModel.showLevelCompleteDialog.collectAsState()
     val starsEarned by viewModel.starsEarned.collectAsState()
     val isTimerRunning by viewModel.isTimerRunning.collectAsState()
@@ -72,7 +79,7 @@ fun ArithmeticPuzzleScreen(
             TopAppBar(
                 title = {
                     Text(
-                        "Arithmetic Puzzle - Level $currentLevel",
+                        "Connections - Level $currentLevel",
                         color = Color.White,
                         fontWeight = FontWeight.Bold
                     )
@@ -87,7 +94,20 @@ fun ArithmeticPuzzleScreen(
                     }
                 },
                 actions = {
-                    // Timer display
+                    IconButton(onClick = { viewModel.showHint() }) {
+                        Icon(
+                            imageVector = Icons.Default.Lightbulb,
+                            contentDescription = "Hint",
+                            tint = Color(0xFFFFD700)
+                        )
+                    }
+                    IconButton(onClick = { viewModel.shuffleWords() }) {
+                        Icon(
+                            imageVector = Icons.Default.Refresh,
+                            contentDescription = "Shuffle",
+                            tint = Color.White
+                        )
+                    }
                     PuzzleTimer(
                         isRunning = isTimerRunning,
                         onTimeUpdate = { timeMs ->
@@ -108,7 +128,6 @@ fun ArithmeticPuzzleScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            // Wood textured background
             Image(
                 painter = painterResource(id = R.drawable.wood_texture),
                 contentDescription = "Wood background",
@@ -119,56 +138,57 @@ fun ArithmeticPuzzleScreen(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
                     .padding(20.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(24.dp)
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Level progress bar
                 LevelProgressBar(
                     progress = levelProgress,
                     problemsRemaining = viewModel.getProblemsRemaining(),
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
 
-                // Score display with beautiful styling
-                ScoreDisplay(score = score, isContentLoaded = isContentLoaded)
-
-                // Problem display with golden card
-                ProblemDisplay(
-                    problem = currentProblem,
+                ConnectionScoreDisplay(
+                    score = score,
+                    mistakes = mistakesRemaining,
                     isContentLoaded = isContentLoaded
                 )
 
-                // Feedback message
                 if (feedback.isNotEmpty()) {
-                    FeedbackMessage(
+                    ConnectionFeedback(
                         feedback = feedback,
                         isCorrect = isCorrect ?: false,
                         isContentLoaded = isContentLoaded
                     )
                 }
 
-                // Answer input with beautiful styling
-                AnswerInput(
-                    value = userAnswer,
-                    onValueChange = { digit ->
-                        viewModel.setUserAnswer(digit)
-                    },
-                    isContentLoaded = isContentLoaded
-                )
+                // Solved Categories
+                solvedCategories.forEach { category ->
+                    SolvedCategoryDisplay(category = category)
+                }
 
-                // Number pad
-                NumberPad(
-                    onNumberClick = { number ->
-                        viewModel.setUserAnswer(number.toString())
-                    },
-                    onBackspace = {
-                        viewModel.setUserAnswer("BACK")
-                    },
-                    onClear = {
-                        viewModel.setUserAnswer("")
+                // Available Words Grid
+                if (availableWords.isNotEmpty()) {
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(4),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 400.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(availableWords) { word ->
+                            WordCard(
+                                word = word,
+                                isSelected = word in selectedWords,
+                                onClick = { viewModel.toggleWordSelection(word) }
+                            )
+                        }
                     }
-                )
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
 
                 // Action buttons
                 Row(
@@ -176,36 +196,51 @@ fun ArithmeticPuzzleScreen(
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     OutlinedButton(
-                        onClick = { viewModel.skipProblem() },
+                        onClick = { viewModel.deselectAll() },
                         modifier = Modifier
                             .weight(1f)
                             .height(56.dp),
                         colors = ButtonDefaults.outlinedButtonColors(
                             contentColor = Color(0xFFD4AF37)
-                        )
+                        ),
+                        shape = RoundedCornerShape(12.dp),
+                        enabled = selectedWords.isNotEmpty()
+                    ) {
+                        Text("CLEAR", fontWeight = FontWeight.Bold)
+                    }
+
+                    OutlinedButton(
+                        onClick = { viewModel.skipPuzzle() },
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(56.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = Color(0xFFD4AF37)
+                        ),
+                        shape = RoundedCornerShape(12.dp)
                     ) {
                         Text("SKIP", fontWeight = FontWeight.Bold)
                     }
 
                     Button(
-                        onClick = { viewModel.checkAnswer() },
-                        enabled = userAnswer.isNotEmpty(),
+                        onClick = { viewModel.submitGuess() },
+                        enabled = selectedWords.size == 4,
                         modifier = Modifier
                             .weight(1f)
                             .height(56.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = Color(0xFFD4AF37),
                             contentColor = Color(0xFF2C1810)
-                        )
+                        ),
+                        shape = RoundedCornerShape(12.dp)
                     ) {
-                        Text("SUBMIT", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        Text("SUBMIT", fontWeight = FontWeight.Bold)
                     }
                 }
             }
         }
     }
 
-    // Level complete dialog with all navigation options
     if (showLevelComplete) {
         LevelCompleteDialog(
             level = currentLevel,
@@ -238,198 +273,145 @@ fun ArithmeticPuzzleScreen(
 }
 
 @Composable
-fun NumberPad(
-    onNumberClick: (Int) -> Unit,
-    onBackspace: () -> Unit,
-    onClear: () -> Unit
+fun WordCard(
+    word: String,
+    isSelected: Boolean,
+    onClick: () -> Unit
 ) {
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        // Row 1: 1, 2, 3
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            for (i in 1..3) {
-                NumberButton(
-                    number = i,
-                    onClick = { onNumberClick(i) },
-                    modifier = Modifier.weight(1f)
-                )
-            }
-        }
-
-        // Row 2: 4, 5, 6
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            for (i in 4..6) {
-                NumberButton(
-                    number = i,
-                    onClick = { onNumberClick(i) },
-                    modifier = Modifier.weight(1f)
-                )
-            }
-        }
-
-        // Row 3: 7, 8, 9
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            for (i in 7..9) {
-                NumberButton(
-                    number = i,
-                    onClick = { onNumberClick(i) },
-                    modifier = Modifier.weight(1f)
-                )
-            }
-        }
-
-        // Row 4: Clear, 0, Backspace
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Button(
-                onClick = onClear,
-                modifier = Modifier
-                    .weight(1f)
-                    .height(56.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFF4A2C1D)
-                )
-            ) {
-                Text("C", fontWeight = FontWeight.Bold, fontSize = 18.sp)
-            }
-
-            NumberButton(
-                number = 0,
-                onClick = { onNumberClick(0) },
-                modifier = Modifier.weight(1f)
-            )
-
-            Button(
-                onClick = onBackspace,
-                modifier = Modifier
-                    .weight(1f)
-                    .height(56.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFF4A2C1D)
-                )
-            ) {
-                Text("⌫", fontSize = 24.sp)
-            }
-        }
-    }
-}
-
-@Composable
-fun NumberButton(
-    number: Int,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Button(
-        onClick = onClick,
-        modifier = modifier.height(56.dp),
-        colors = ButtonDefaults.buttonColors(
-            containerColor = Color(0xFF2C1810)
-        ),
-        shape = RoundedCornerShape(12.dp)
-    ) {
-        Text(
-            text = number.toString(),
-            fontSize = 24.sp,
-            fontWeight = FontWeight.Bold,
-            color = Color.White
-        )
-    }
-}
-
-@Composable
-fun ScoreDisplay(score: Int, isContentLoaded: Boolean) {
     Box(
         modifier = Modifier
-            .fillMaxWidth()
-            .height(60.dp)
-            .scale(
-                animateFloatAsState(
-                    targetValue = if (isContentLoaded) 1f else 0.8f,
-                    animationSpec = tween(durationMillis = 600), label = ""
-                ).value
-            )
+            .aspectRatio(1f)
             .background(
-                color = Color(0xFF2C1810),
+                color = if (isSelected) Color(0xFFD4AF37) else Color(0xFF2C1810),
                 shape = RoundedCornerShape(12.dp)
             )
             .border(
                 width = 2.dp,
-                brush = Brush.linearGradient(
-                    colors = listOf(Color(0xFFD4AF37), Color(0xFFFFD700)),
-                    tileMode = TileMode.Repeated
-                ),
+                color = if (isSelected) Color(0xFFFFD700) else Color(0xFF6A4C3D),
                 shape = RoundedCornerShape(12.dp)
-            ),
+            )
+            .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
         Text(
-            text = "Score: $score",
-            color = Color.White,
-            fontSize = 20.sp,
+            text = word,
+            color = if (isSelected) Color(0xFF2C1810) else Color.White,
+            fontSize = 14.sp,
             fontWeight = FontWeight.Bold,
-            letterSpacing = 1.sp
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(4.dp)
         )
     }
 }
 
 @Composable
-fun ProblemDisplay(problem: String, isContentLoaded: Boolean) {
+fun SolvedCategoryDisplay(category: ConnectionCategory) {
+    val bgColor = when (category.color) {
+        CategoryColor.YELLOW -> Color(0xFFF9DF6D)
+        CategoryColor.GREEN -> Color(0xFFA0C35A)
+        CategoryColor.BLUE -> Color(0xFFB0C4EF)
+        CategoryColor.PURPLE -> Color(0xFFBA81C5)
+    }
+
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .scale(
-                animateFloatAsState(
-                    targetValue = if (isContentLoaded) 1f else 0.9f,
-                    animationSpec = tween(durationMillis = 600, delayMillis = 100), label = ""
-                ).value
-            )
-            .shadow(
-                elevation = 16.dp,
-                shape = RoundedCornerShape(16.dp),
-                spotColor = Color(0xFFFFD700)
-            ),
-        shape = RoundedCornerShape(16.dp)
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp)
     ) {
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(
-                    brush = Brush.linearGradient(
-                        colors = listOf(Color(0xFF2C1810), Color(0xFF4A2C1D)),
-                        tileMode = TileMode.Repeated
-                    )
-                )
+                .background(bgColor)
+                .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = problem,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(32.dp),
-                fontSize = 36.sp,
+                text = category.name.uppercase(),
+                fontSize = 14.sp,
                 fontWeight = FontWeight.ExtraBold,
-                textAlign = TextAlign.Center,
-                color = Color(0xFFFFD700)
+                color = Color(0xFF2C1810)
+            )
+            Text(
+                text = category.words.joinToString(", "),
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFF2C1810),
+                textAlign = TextAlign.Center
             )
         }
     }
 }
 
 @Composable
-fun FeedbackMessage(feedback: String, isCorrect: Boolean, isContentLoaded: Boolean) {
+fun ConnectionScoreDisplay(score: Int, mistakes: Int, isContentLoaded: Boolean) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .height(60.dp)
+                .scale(
+                    animateFloatAsState(
+                        targetValue = if (isContentLoaded) 1f else 0.8f,
+                        animationSpec = tween(durationMillis = 600), label = ""
+                    ).value
+                )
+                .background(
+                    color = Color(0xFF2C1810),
+                    shape = RoundedCornerShape(12.dp)
+                )
+                .border(
+                    width = 2.dp,
+                    brush = Brush.linearGradient(
+                        colors = listOf(Color(0xFFD4AF37), Color(0xFFFFD700)),
+                        tileMode = TileMode.Repeated
+                    ),
+                    shape = RoundedCornerShape(12.dp)
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = "Score: $score",
+                color = Color.White,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
+
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .height(60.dp)
+                .scale(
+                    animateFloatAsState(
+                        targetValue = if (isContentLoaded) 1f else 0.8f,
+                        animationSpec = tween(durationMillis = 600), label = ""
+                    ).value
+                )
+                .background(
+                    color = if (mistakes > 0) Color(0xFF2C1810) else Color(0x55FF4444),
+                    shape = RoundedCornerShape(12.dp)
+                )
+                .border(
+                    width = 2.dp,
+                    color = if (mistakes > 0) Color(0xFFD4AF37) else Color(0xFFFF4444),
+                    shape = RoundedCornerShape(12.dp)
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = "Mistakes: $mistakes",
+                color = Color.White,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
+    }
+}
+
+@Composable
+fun ConnectionFeedback(feedback: String, isCorrect: Boolean, isContentLoaded: Boolean) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -454,45 +436,8 @@ fun FeedbackMessage(feedback: String, isCorrect: Boolean, isContentLoaded: Boole
         Text(
             text = feedback,
             color = Color.White,
-            fontSize = 18.sp,
+            fontSize = 16.sp,
             fontWeight = FontWeight.Bold
-        )
-    }
-}
-
-@Composable
-fun AnswerInput(
-    value: String,
-    onValueChange: (String) -> Unit,
-    isContentLoaded: Boolean
-) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(80.dp)
-            .scale(
-                animateFloatAsState(
-                    targetValue = if (isContentLoaded) 1f else 0.9f,
-                    animationSpec = tween(durationMillis = 600, delayMillis = 150), label = ""
-                ).value
-            )
-            .background(
-                color = Color(0xFF2C1810),
-                shape = RoundedCornerShape(16.dp)
-            )
-            .border(
-                width = 3.dp,
-                color = Color(0xFFD4AF37),
-                shape = RoundedCornerShape(16.dp)
-            ),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = if (value.isEmpty()) "Enter answer..." else value,
-            fontSize = 32.sp,
-            fontWeight = FontWeight.Bold,
-            color = if (value.isEmpty()) Color.Gray else Color.White,
-            textAlign = TextAlign.Center
         )
     }
 }
