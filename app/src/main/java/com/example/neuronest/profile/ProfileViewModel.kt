@@ -1,19 +1,23 @@
 // viewmodel/ProfileViewModel.kt
 package com.example.neuronest.profile
 
+import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
 class ProfileViewModel @Inject constructor(
-    private val profileRepository: ProfileRepository
+    private val profileRepository: ProfileRepository,
+    @ApplicationContext private val context: Context
 ) : ViewModel() {
 
 
@@ -27,16 +31,23 @@ class ProfileViewModel @Inject constructor(
     val achievements: StateFlow<List<Achievement>> = _achievements.asStateFlow()
 
 
-    private val _needsProfileSetup = MutableStateFlow(false)
+    private val _needsProfileSetup = MutableStateFlow(true)
     val needsProfileSetup: StateFlow<Boolean> = _needsProfileSetup.asStateFlow()
+
     init {
         loadProfile()
         loadAchievements()
         checkProfileSetup()
     }
+
     private fun checkProfileSetup() {
         viewModelScope.launch {
-//            _needsProfileSetup.value = !profileRepository.isProfileSetup()
+            // Check DataStore for saved profile data
+            val userPreferences = com.example.neuronest.data.UserPreferences(context)
+            val userName = userPreferences.userName.first()
+
+            // If user has saved their name, profile is set up
+            _needsProfileSetup.value = userName.isNullOrEmpty()
         }
     }
     // In ProfileViewModel.kt
@@ -101,7 +112,15 @@ class ProfileViewModel @Inject constructor(
 
     fun updateProfileDetails(displayName: String, imageUri: String) {
         viewModelScope.launch {
+            // Save to DataStore
+            val userPreferences = com.example.neuronest.data.UserPreferences(context)
+            userPreferences.saveUserName(displayName)
+            userPreferences.saveProfileImageUri(imageUri)
+
+            // Update profile in database if needed
 //            profileRepository.updateProfileDetails(displayName, imageUri)
+
+            // Refresh profile and check setup status
             loadProfile()
             checkProfileSetup()
         }

@@ -13,7 +13,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -30,7 +30,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -39,6 +38,7 @@ import com.example.neuronest.R
 import com.example.neuronest.profile.ProfileViewModel
 import com.example.neuronest.profile.UserProfile
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -47,6 +47,10 @@ fun ProfileSetupScreen(
     viewModel: ProfileViewModel = hiltViewModel(),
     onProfileSetupComplete: () -> Unit
 ) {
+    val context = LocalContext.current
+    val userPreferences = remember { com.example.neuronest.data.UserPreferences(context) }
+    val coroutineScope = rememberCoroutineScope()
+
     val profile by viewModel.profile.collectAsState()
     var displayName by remember { mutableStateOf(profile?.displayName ?: "") }
     var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
@@ -63,7 +67,7 @@ fun ProfileSetupScreen(
         if (profile?.profileImageUri?.isNotEmpty() == true) {
             try {
                 selectedImageUri = Uri.parse(profile?.profileImageUri)
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 // Handle error
             }
         }
@@ -88,7 +92,7 @@ fun ProfileSetupScreen(
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
-                            imageVector = Icons.Default.ArrowBack,
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back",
                             tint = Color.White
                         )
@@ -142,13 +146,22 @@ fun ProfileSetupScreen(
                     displayName = displayName,
                     isContentLoaded = isContentLoaded,
                     onSave = {
+                        // Save to both ViewModel and DataStore
                         viewModel.updateProfileDetails(
                             displayName,
                             selectedImageUri?.toString() ?: ""
                         )
+
+                        // Save to DataStore for persistent storage
+                        coroutineScope.launch {
+                            userPreferences.saveUserName(displayName)
+                            userPreferences.saveProfileImageUri(selectedImageUri?.toString() ?: "")
+                        }
+
                         onProfileSetupComplete()
                     },
                     onSkip = {
+                        // Even when skipping, we can still update later from Profile screen
                         viewModel.updateProfileDetails("Guest User", "")
                         onProfileSetupComplete()
                     }

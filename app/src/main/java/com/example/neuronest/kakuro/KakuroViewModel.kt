@@ -35,7 +35,6 @@ class KakuroViewModel @Inject constructor(
     private val _isCorrect = MutableStateFlow<Boolean?>(null)
     val isCorrect: StateFlow<Boolean?> = _isCorrect.asStateFlow()
 
-    private val generator = KakuroGenerator()
     private var puzzleStartTime: Long = 0
 
     init {
@@ -43,7 +42,7 @@ class KakuroViewModel @Inject constructor(
     }
 
     override fun onLevelLoaded(level: Int) {
-        generateNewPuzzle(level)
+        loadPuzzleForLevel(level)
         puzzleStartTime = System.currentTimeMillis()
     }
 
@@ -54,8 +53,12 @@ class KakuroViewModel @Inject constructor(
         _isCorrect.value = null
     }
 
-    private fun generateNewPuzzle(level: Int) {
-        val puzzle = generator.generatePuzzle(level)
+    private fun loadPuzzleForLevel(level: Int) {
+        // Load puzzle from data based on level and current puzzle within level
+        val puzzleIndexBase = (level - 1) * problemsRequired
+        val pickIndex = (puzzleIndexBase + (problemsSolved % problemsRequired)) % KakuroPuzzleData.puzzles.size
+        val puzzle = KakuroPuzzleData.puzzles[pickIndex]
+
         _currentPuzzle.value = puzzle
         _grid.value = puzzle.grid
         _selectedCell.value = null
@@ -124,7 +127,7 @@ class KakuroViewModel @Inject constructor(
 
                 // Generate next puzzle if level not complete
                 if (!_isLevelComplete.value) {
-                    generateNewPuzzle(_currentLevel.value)
+                    loadPuzzleForLevel(_currentLevel.value)
                 }
             }
         } else {
@@ -186,7 +189,7 @@ class KakuroViewModel @Inject constructor(
             onProblemSolved(timeTaken, pointsEarned)
 
             if (!_isLevelComplete.value) {
-                generateNewPuzzle(_currentLevel.value)
+                loadPuzzleForLevel(_currentLevel.value)
             }
         }
     }
@@ -200,7 +203,28 @@ class KakuroViewModel @Inject constructor(
         onProblemSolved(0L, 0) // Skip gives no points
 
         if (!_isLevelComplete.value) {
-            generateNewPuzzle(_currentLevel.value)
+            loadPuzzleForLevel(_currentLevel.value)
+        }
+    }
+
+    fun checkPuzzle() {
+        if (_isLevelComplete.value) return
+
+        val puzzle = _currentPuzzle.value ?: return
+        val grid = _grid.value
+
+        if (isPuzzleComplete(grid, puzzle)) {
+            val timeTaken = System.currentTimeMillis() - puzzleStartTime
+            val pointsEarned = calculateScore(timeTaken)
+            _feedback.value = "Kakuro Complete! +$pointsEarned points"
+            onProblemSolved(timeTaken, pointsEarned)
+
+            if (!_isLevelComplete.value) {
+                loadPuzzleForLevel(_currentLevel.value)
+            }
+        } else {
+            _feedback.value = "Puzzle not complete or has errors!"
+            soundManager.playSound(SoundType.INCORRECT_MOVE)
         }
     }
 

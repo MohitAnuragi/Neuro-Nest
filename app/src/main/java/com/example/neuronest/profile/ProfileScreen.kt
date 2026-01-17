@@ -15,12 +15,11 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ExitToApp
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -32,15 +31,12 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.rememberAsyncImagePainter
-import coil.request.ImageRequest
 import com.example.neuronest.R
 import java.io.InputStream
 import java.text.SimpleDateFormat
@@ -64,8 +60,12 @@ fun ProfileScreen(
     viewModel: ProfileViewModel = hiltViewModel(),
     onSignOut: () -> Unit = {}
 ) {
+    val context = LocalContext.current
+    val userPreferences = remember { com.example.neuronest.data.UserPreferences(context) }
+
     val profile by viewModel.profile.collectAsState()
-    val achievements by viewModel.achievements.collectAsState()
+    val userName: String? by userPreferences.userName.collectAsState(initial = null)
+    val profileImageUri: String? by userPreferences.profileImageUri.collectAsState(initial = null)
     var isContentLoaded by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
@@ -93,7 +93,7 @@ fun ProfileScreen(
                         ).value)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.ExitToApp,
+                            imageVector = Icons.AutoMirrored.Filled.ExitToApp,
                             contentDescription = "Sign Out",
                             tint = Color.White
                         )
@@ -141,7 +141,7 @@ fun ProfileScreen(
                             animationSpec = tween(durationMillis = 800)
                         ).value)
                 ) {
-                    ProfileHeader(profile, isContentLoaded)
+                    ProfileHeader(profile, isContentLoaded, userName ?: "", profileImageUri ?: "")
                 }
 
                 Spacer(modifier = Modifier.height(24.dp))
@@ -154,10 +154,6 @@ fun ProfileScreen(
                 // Puzzle type stats
                 PuzzleTypeStats(profile, isContentLoaded)
 
-                Spacer(modifier = Modifier.height(24.dp))
-
-                // Achievements section
-                AchievementsSection(achievements, isContentLoaded)
 
                 Spacer(modifier = Modifier.height(24.dp))
             }
@@ -166,43 +162,8 @@ fun ProfileScreen(
 }
 
 @Composable
-fun ProfileHeader(profile: UserProfile?, isContentLoaded: Boolean) {
+fun ProfileHeader(profile: UserProfile?, isContentLoaded: Boolean, userName: String, profileImageUri: String) {
     val context = LocalContext.current
-    val profileImageUri by remember(profile?.profileImageUri) {
-        derivedStateOf {
-            if (!profile?.profileImageUri.isNullOrEmpty()) {
-                try {
-                    Uri.parse(profile?.profileImageUri)
-                } catch (e: Exception) {
-                    null
-                }
-            } else {
-                null
-            }
-        }
-    }
-
-    val bitmapState = remember(profileImageUri) { mutableStateOf<Bitmap?>(null) }
-    val isLoading = remember(profileImageUri) { mutableStateOf(false) }
-
-    LaunchedEffect(profileImageUri) {
-        if (profileImageUri != null) {
-            isLoading.value = true
-            try {
-                val inputStream: InputStream? = context.contentResolver.openInputStream(profileImageUri!!)
-                inputStream?.use { stream ->
-                    bitmapState.value = BitmapFactory.decodeStream(stream)
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-                bitmapState.value = null
-            } finally {
-                isLoading.value = false
-            }
-        } else {
-            bitmapState.value = null
-        }
-    }
 
     Card(
         modifier = Modifier
@@ -252,14 +213,12 @@ fun ProfileHeader(profile: UserProfile?, isContentLoaded: Boolean) {
                         .clip(CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
-                    if (isLoading.value) {
-                        CircularProgressIndicator(
-                            color = Color(0xFFD4AF37),
-                            modifier = Modifier.size(24.dp)
-                        )
-                    } else if (bitmapState.value != null) {
+                    if (profileImageUri.isNotEmpty() && profileImageUri != "null") {
+                        // Use Coil's AsyncImage for better image loading
                         Image(
-                            bitmap = bitmapState.value!!.asImageBitmap(),
+                            painter = rememberAsyncImagePainter(
+                                model = Uri.parse(profileImageUri)
+                            ),
                             contentDescription = "Profile Image",
                             modifier = Modifier.fillMaxSize(),
                             contentScale = ContentScale.Crop
@@ -278,10 +237,10 @@ fun ProfileHeader(profile: UserProfile?, isContentLoaded: Boolean) {
 
                 // Display name
                 Text(
-                    text = if (!profile?.displayName.isNullOrEmpty()) {
-                        profile?.displayName ?: "Puzzle Solver"
+                    text = if (userName.isNotEmpty()) {
+                        userName
                     } else {
-                        profile?.username ?: "Puzzle Solver"
+                        "Guest"
                     },
                     style = MaterialTheme.typography.headlineSmall.copy(
                         color = Color.White,

@@ -9,6 +9,8 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
@@ -23,7 +25,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -157,6 +161,16 @@ fun KakuroScreen(
                     grid = grid,
                     selectedCell = selectedCell,
                     onCellClick = { row, col -> viewModel.selectCell(row, col) },
+                    onCellValueChange = { row, col, value ->
+                        if (value.isNotEmpty()) {
+                            val num = value.toIntOrNull()
+                            if (num != null && num in 1..9) {
+                                viewModel.setCellValue(num)
+                            }
+                        } else {
+                            viewModel.clearCell()
+                        }
+                    },
                     isContentLoaded = isContentLoaded
                 )
 
@@ -181,14 +195,21 @@ fun KakuroScreen(
                     ) {
                         Text("SKIP", fontWeight = FontWeight.Bold, fontSize = 16.sp)
                     }
-                }
 
-                // Number pad
-                KakuroNumberPad(
-                    onNumberClick = { number ->
-                        viewModel.setCellValue(number)
+                    Button(
+                        onClick = { viewModel.checkPuzzle() },
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(56.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFFD4AF37),
+                            contentColor = Color(0xFF2C1810)
+                        ),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text("SUBMIT", fontWeight = FontWeight.Bold, fontSize = 16.sp)
                     }
-                )
+                }
             }
         }
     }
@@ -229,6 +250,7 @@ fun KakuroGrid(
     grid: List<List<KakuroCell>>,
     selectedCell: Pair<Int, Int>?,
     onCellClick: (Int, Int) -> Unit,
+    onCellValueChange: (Int, Int, String) -> Unit,
     isContentLoaded: Boolean
 ) {
     if (grid.isEmpty()) return
@@ -277,7 +299,10 @@ fun KakuroGrid(
                                 KakuroPlayCell(
                                     cell = cell,
                                     isSelected = selectedCell == Pair(rowIndex, colIndex),
-                                    onClick = { onCellClick(rowIndex, colIndex) }
+                                    onClick = { onCellClick(rowIndex, colIndex) },
+                                    onValueChange = { value ->
+                                        onCellValueChange(rowIndex, colIndex, value)
+                                    }
                                 )
                             }
                         }
@@ -338,7 +363,8 @@ fun KakuroClueCell(cell: KakuroCell.ClueCell) {
 fun KakuroPlayCell(
     cell: KakuroCell.PlayCell,
     isSelected: Boolean,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onValueChange: (String) -> Unit
 ) {
     val backgroundColor = when {
         cell.isError -> Color(0x55FF4444)
@@ -352,6 +378,10 @@ fun KakuroPlayCell(
         else -> Color(0xFF6A4C3D)
     }
 
+    var textValue by remember(cell.value) {
+        mutableStateOf(if (cell.value == 0) "" else cell.value.toString())
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -360,73 +390,32 @@ fun KakuroPlayCell(
             .clickable { onClick() },
         contentAlignment = Alignment.Center
     ) {
-        if (cell.value > 0) {
-            Text(
-                text = cell.value.toString(),
+        BasicTextField(
+            value = textValue,
+            onValueChange = { newValue ->
+                if (newValue.isEmpty() || (newValue.length == 1 && newValue.toIntOrNull()?.let { it in 1..9 } == true)) {
+                    textValue = newValue
+                    onValueChange(newValue)
+                }
+            },
+            textStyle = TextStyle(
                 color = Color(0xFF2C1810),
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center
-            )
-        }
-    }
-}
-
-@Composable
-fun KakuroNumberPad(
-    onNumberClick: (Int) -> Unit
-) {
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        // First row: 1-5
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)
-        ) {
-            (1..5).forEach { number ->
-                Button(
-                    onClick = { onNumberClick(number) },
-                    modifier = Modifier.size(56.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF2C1810)
-                    ),
-                    shape = RoundedCornerShape(12.dp)
+            ),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            singleLine = true,
+            modifier = Modifier.fillMaxSize(),
+            decorationBox = { innerTextField ->
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        text = number.toString(),
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
+                    innerTextField()
                 }
             }
-        }
-
-        // Second row: 6-9
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)
-        ) {
-            (6..9).forEach { number ->
-                Button(
-                    onClick = { onNumberClick(number) },
-                    modifier = Modifier.size(56.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF2C1810)
-                    ),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Text(
-                        text = number.toString(),
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
-                }
-            }
-        }
+        )
     }
 }
 
