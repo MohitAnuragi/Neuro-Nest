@@ -42,6 +42,11 @@ class WordScrambleViewModel @Inject constructor(
         problemsRequired = 5 // 5 words per level
     }
 
+    // Public method to play sounds from UI
+    fun playSoundEffect(soundType: SoundType) {
+        soundManager.playSound(soundType)
+    }
+
     override fun onLevelLoaded(level: Int) {
         // Load the data-driven puzzle(s) for this level
         loadPuzzleForLevel(level)

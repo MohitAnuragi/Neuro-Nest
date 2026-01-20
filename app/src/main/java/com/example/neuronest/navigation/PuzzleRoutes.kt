@@ -1,6 +1,5 @@
 package com.example.neuronest.navigation
 
-import android.R.attr.level
 import com.example.neuronest.backgroundMusic.BackgroundMusicPlayer
 import androidx.annotation.DrawableRes
 import androidx.compose.runtime.Composable
@@ -19,7 +18,6 @@ import androidx.navigation.navArgument
 import com.example.neuronest.Sequence.SequenceGeneratorScreen
 import com.example.neuronest.WordScramble.WordScrambleScreen
 import com.example.neuronest.kakuro.KakuroScreen
-import com.example.neuronest.auth.ProfileSetupScreen
 import com.example.neuronest.auth.SplashScreen
 import com.example.neuronest.logic.LogicRiddlesScreen
 import com.example.neuronest.profile.AchievementsScreen
@@ -28,6 +26,7 @@ import com.example.neuronest.profile.ProfileViewModel
 import com.example.neuronest.puzzlelevels.LevelGridScreen
 import com.example.neuronest.sudoku.SudokuPuzzleScreen
 import com.example.neuronest.R
+import com.example.neuronest.auth.ProfileSetupScreen
 import com.example.neuronest.connection.ConnectionPuzzleScreen
 
 @Composable
@@ -39,11 +38,19 @@ fun PuzzleNavigation() {
 
     // Track if profile check is complete
     var profileCheckComplete by remember { mutableStateOf(false) }
+    var initialCheckDone by remember { mutableStateOf(false) }
 
-    // Wait a moment for profile check to complete
+    // Wait for profile check to complete with sufficient time for Room database
     LaunchedEffect(Unit) {
-        kotlinx.coroutines.delay(500) // Give time for DataStore to load
-        profileCheckComplete = true
+        kotlinx.coroutines.delay(1000) // Allow time for Room database to load
+        initialCheckDone = true
+    }
+
+    // Wait for both timing and setup check to complete
+    LaunchedEffect(needsSetup, initialCheckDone) {
+        if (initialCheckDone) {
+            profileCheckComplete = true
+        }
     }
 
     BackgroundMusicPlayer(
@@ -301,6 +308,9 @@ fun PuzzleNavigation() {
                     navController.navigate(PuzzleRoutes.Selection.route) {
                         popUpTo(PuzzleRoutes.ProfileSetup.route) { inclusive = true }
                     }
+                },
+                onBack = {
+                    navController.popBackStack()
                 }
             )
         }

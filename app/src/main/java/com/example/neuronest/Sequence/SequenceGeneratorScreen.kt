@@ -1,5 +1,6 @@
 package com.example.neuronest.Sequence
 
+import android.content.Context
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
@@ -12,7 +13,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -23,19 +23,30 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.preferencesDataStore
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.neuronest.R
 import com.example.neuronest.WordScramble.ScoreDisplay
 import com.example.neuronest.puzzlelevels.LevelCompleteDialog
 import com.example.neuronest.puzzlelevels.LevelProgressBar
 import com.example.neuronest.puzzlelevels.PuzzleTimer
+import com.example.neuronest.sound.SoundType
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
+
+private val Context.sequenceTutorialDataStore by preferencesDataStore(name = "sequence_tutorial_prefs")
+private val TUTORIAL_COMPLETED_KEY = booleanPreferencesKey("tutorial_completed")
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -47,6 +58,24 @@ fun SequenceGeneratorScreen(
     onGoToGrid: () -> Unit = {}
 ) {
     val viewModel: SequenceGeneratorViewModel = hiltViewModel()
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+
+    // Tutorial state
+    var showTutorial by remember { mutableStateOf(false) }
+    var tutorialCheckDone by remember { mutableStateOf(false) }
+
+    // Check if tutorial was already shown
+    LaunchedEffect(Unit) {
+        val tutorialCompleted = context.sequenceTutorialDataStore.data.map { prefs ->
+            prefs[TUTORIAL_COMPLETED_KEY] ?: false
+        }.first()
+
+        if (!tutorialCompleted && level == 1) {
+            showTutorial = true
+        }
+        tutorialCheckDone = true
+    }
 
     LaunchedEffect(level) {
         viewModel.loadLevel(level)
@@ -78,7 +107,7 @@ fun SequenceGeneratorScreen(
             TopAppBar(
                 title = {
                     Text(
-                        "Sequence Generator - Level $currentLevel",
+                        "Sequence Generator",
                         color = Color.White,
                         fontWeight = FontWeight.Bold
                     )
@@ -141,7 +170,7 @@ fun SequenceGeneratorScreen(
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
 
-                ScoreDisplay(score = score, isContentLoaded = isContentLoaded)
+                ScoreDisplay(currentLevel = currentLevel, isContentLoaded = isContentLoaded)
 
                 Text(
                     text = "What's the next number?",
@@ -204,6 +233,17 @@ fun SequenceGeneratorScreen(
                         Text("SUBMIT", fontWeight = FontWeight.Bold, fontSize = 16.sp)
                     }
                 }
+                Button(
+                    onClick = { viewModel.showHint() },
+                    modifier = Modifier
+                        .width(200.dp)
+                        .height(100.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = Color(0xFF000000)
+                    )
+                ) {
+                    Text("HINT", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                }
             }
         }
     }
@@ -235,6 +275,23 @@ fun SequenceGeneratorScreen(
             },
             showNextButton = currentLevel < 500,
             isLastLevel = currentLevel >= 500
+        )
+    }
+
+    // Tutorial overlay
+    if (showTutorial && tutorialCheckDone) {
+        HowToPlaySequenceOverlay(
+            onDismiss = {
+                showTutorial = false
+                coroutineScope.launch {
+                    context.sequenceTutorialDataStore.edit { prefs ->
+                        prefs[TUTORIAL_COMPLETED_KEY] = true
+                    }
+                }
+            },
+            onPlaySound = {
+                viewModel.playSoundEffect(SoundType.TRANSITION)
+            }
         )
     }
 }

@@ -20,6 +20,7 @@ class ConnectionPuzzleViewModel @Inject constructor(
 
     override val puzzleType: String = "Connections"
 
+
     private val _currentPuzzle = MutableStateFlow<ConnectionPuzzle?>(null)
     val currentPuzzle: StateFlow<ConnectionPuzzle?> = _currentPuzzle.asStateFlow()
 
@@ -44,7 +45,7 @@ class ConnectionPuzzleViewModel @Inject constructor(
     private var puzzleStartTime: Long = 0
 
     init {
-        problemsRequired = 3 // 3 connection puzzles per level
+        problemsRequired = 1 // 1 connection puzzle per level
     }
 
     override fun onLevelLoaded(level: Int) {
@@ -62,9 +63,16 @@ class ConnectionPuzzleViewModel @Inject constructor(
     }
 
     private fun loadPuzzleForLevel(level: Int) {
-        val puzzleIndexBase = (level - 1) * problemsRequired
-        val pickIndex = (puzzleIndexBase + (problemsSolved % problemsRequired)) % ConnectionPuzzleData.puzzles.size
-        val puzzle = ConnectionPuzzleData.puzzles[pickIndex]
+        // NO LOOPING - Each level from 1-500 gets exactly one unique puzzle
+        val puzzleIndex = (level - 1).coerceIn(0, ConnectionPuzzleData.puzzles.size - 1)
+        val puzzle = ConnectionPuzzleData.puzzles[puzzleIndex]
+
+        // Verify that the puzzle level matches the requested level
+        if (puzzle.level != level && level <= ConnectionPuzzleData.puzzles.size) {
+            android.util.Log.e("ConnectionPuzzle", "⚠️ Level mismatch! Requested: $level, Got: ${puzzle.level}")
+        } else {
+            android.util.Log.d("ConnectionPuzzle", "✅ Loading Level $level - Puzzle ID: ${puzzle.level}")
+        }
 
         _currentPuzzle.value = puzzle
         _availableWords.value = puzzle.words.shuffled()
@@ -134,9 +142,7 @@ class ConnectionPuzzleViewModel @Inject constructor(
 
                 onProblemSolved(timeTaken, pointsEarned)
 
-                if (!_isLevelComplete.value) {
-                    loadPuzzleForLevel(_currentLevel.value)
-                }
+                // Don't load next puzzle - let the dialog handle navigation
             }
         } else {
             // Wrong guess
@@ -160,11 +166,10 @@ class ConnectionPuzzleViewModel @Inject constructor(
         _feedback.value = "Puzzle skipped!"
         soundManager.playSound(SoundType.TRANSITION)
 
+        // Skip gives no points, but completes the level
         onProblemSolved(0L, 0)
 
-        if (!_isLevelComplete.value) {
-            loadPuzzleForLevel(_currentLevel.value)
-        }
+        // Don't load next puzzle - let the dialog handle navigation
     }
 
     fun showHint() {

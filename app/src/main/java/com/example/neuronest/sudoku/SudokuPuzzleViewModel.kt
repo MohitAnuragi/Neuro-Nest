@@ -45,7 +45,12 @@ class SudokuPuzzleViewModel @Inject constructor(
     private var puzzleStartTime: Long = 0
 
     init {
-        problemsRequired = 3 // 3 Sudoku puzzles per level
+        problemsRequired = 1 // 1 Sudoku puzzle per level
+    }
+
+    // Public method to play sounds from UI
+    fun playSoundEffect(soundType: SoundType) {
+        soundManager.playSound(soundType)
     }
 
     override fun onLevelLoaded(level: Int) {
@@ -61,10 +66,9 @@ class SudokuPuzzleViewModel @Inject constructor(
     }
 
     private fun loadPuzzleForLevel(level: Int) {
-        // Load puzzle from data based on level and current puzzle within level
-        val puzzleIndexBase = (level - 1) * problemsRequired
-        val pickIndex = (puzzleIndexBase + (problemsSolved % problemsRequired)) % SudokuPuzzleData.puzzles.size
-        val puzzleData = SudokuPuzzleData.puzzles[pickIndex]
+        // Load puzzle directly based on level number (1 puzzle per level)
+        val puzzleIndex = (level - 1) % SudokuPuzzleData.puzzles.size
+        val puzzleData = SudokuPuzzleData.puzzles[puzzleIndex]
 
         _gridSize.value = puzzleData.size
         solutionGrid = puzzleData.solution
@@ -119,9 +123,9 @@ class SudokuPuzzleViewModel @Inject constructor(
         val cell = _grid.value[row][col]
         if (cell.isFixed) return
 
-        // Update the cell value
+        // Update the cell value and clear any previous error
         val newGrid = _grid.value.map { it.toMutableList() }.toMutableList()
-        newGrid[row][col] = cell.copy(value = value, notes = emptySet())
+        newGrid[row][col] = cell.copy(value = value, notes = emptySet(), isError = false)
 
         // Validate the move using generator
         val gridValues = newGrid.map { row -> row.map { it.value } }
@@ -135,6 +139,10 @@ class SudokuPuzzleViewModel @Inject constructor(
 
             // Check if puzzle is complete
             if (isPuzzleComplete(gridValues)) {
+                println("✓✓✓ Sudoku puzzle completed via setCellValue!")
+                println("Current level: ${_currentLevel.value}")
+                println("Problems solved: $problemsSolved / $problemsRequired")
+
                 val timeTaken = System.currentTimeMillis() - puzzleStartTime
                 val pointsEarned = calculateScore(timeTaken)
                 _feedback.value = "Sudoku Complete! +$pointsEarned points"
@@ -142,10 +150,11 @@ class SudokuPuzzleViewModel @Inject constructor(
                 // Call onProblemSolved which handles progress and completion
                 onProblemSolved(timeTaken, pointsEarned)
 
-                // Generate next puzzle if level not complete
-                if (!_isLevelComplete.value) {
-                    loadPuzzleForLevel(_currentLevel.value)
-                }
+                println("After onProblemSolved - Problems solved: $problemsSolved / $problemsRequired")
+                println("Is level complete: ${_isLevelComplete.value}")
+                println("Show dialog: ${_showLevelCompleteDialog.value}")
+
+                // Don't load next puzzle - let the dialog handle navigation
             }
         } else {
             // Mark cell with error
@@ -179,12 +188,10 @@ class SudokuPuzzleViewModel @Inject constructor(
         _feedback.value = "Puzzle skipped!"
         soundManager.playSound(SoundType.TRANSITION)
 
-        // Generate next puzzle or complete level
-        onProblemSolved(0L, 0) // Skip gives no points
+        // Skip gives no points, but completes the level
+        onProblemSolved(0L, 0)
 
-        if (!_isLevelComplete.value) {
-            loadPuzzleForLevel(_currentLevel.value)
-        }
+        // Don't load next puzzle - let the dialog handle navigation
     }
 
     fun checkPuzzle() {
@@ -192,17 +199,48 @@ class SudokuPuzzleViewModel @Inject constructor(
 
         val gridValues = _grid.value.map { row -> row.map { it.value } }
 
+        // Debug: Print current grid state
+        println("=== Sudoku Grid Debug ===")
+        println("Grid size: ${gridValues.size}")
+        for (i in gridValues.indices) {
+            println("Row $i: ${gridValues[i].joinToString(", ")}")
+        }
+
+        // Quick check: Are there any empty cells?
+        val emptyCells = mutableListOf<Pair<Int, Int>>()
+        for (row in gridValues.indices) {
+            for (col in gridValues[row].indices) {
+                if (gridValues[row][col] == 0) {
+                    emptyCells.add(Pair(row, col))
+                }
+            }
+        }
+
+        if (emptyCells.isNotEmpty()) {
+            _feedback.value = "Fill all empty cells! ${emptyCells.size} cells remaining."
+            soundManager.playSound(SoundType.INCORRECT_MOVE)
+            println("INCOMPLETE: ${emptyCells.size} empty cells found at: $emptyCells")
+            return
+        }
+
         if (isPuzzleComplete(gridValues)) {
+            println("✓✓✓ Sudoku puzzle completed via checkPuzzle!")
+            println("Current level: ${_currentLevel.value}")
+            println("Problems solved: $problemsSolved / $problemsRequired")
+
             val timeTaken = System.currentTimeMillis() - puzzleStartTime
             val pointsEarned = calculateScore(timeTaken)
             _feedback.value = "Sudoku Complete! +$pointsEarned points"
+            soundManager.playSound(SoundType.LEVEL_COMPLETE)
             onProblemSolved(timeTaken, pointsEarned)
 
-            if (!_isLevelComplete.value) {
-                loadPuzzleForLevel(_currentLevel.value)
-            }
+            println("After onProblemSolved - Problems solved: $problemsSolved / $problemsRequired")
+            println("Is level complete: ${_isLevelComplete.value}")
+            println("Show dialog: ${_showLevelCompleteDialog.value}")
+
+            // Don't load next puzzle - let the dialog handle navigation
         } else {
-            _feedback.value = "Puzzle not complete or has errors!"
+            _feedback.value = "Puzzle has errors! Check rows, columns, and boxes."
             soundManager.playSound(SoundType.INCORRECT_MOVE)
         }
     }
@@ -235,32 +273,74 @@ class SudokuPuzzleViewModel @Inject constructor(
             _feedback.value = "Sudoku Complete! +$pointsEarned points"
             onProblemSolved(timeTaken, pointsEarned)
 
-            // Generate next puzzle if level not complete
-            if (!_isLevelComplete.value) {
-                loadPuzzleForLevel(_currentLevel.value)
-            }
+            // Don't load next puzzle - let the dialog handle navigation
         }
     }
 
     private fun isPuzzleComplete(grid: List<List<Int>>): Boolean {
-        // All cells must be filled
-        if (grid.any { row -> row.any { it == 0 } }) return false
-
         val size = grid.size
         val subgridSize = sqrt(size.toDouble()).toInt()
 
-        // Check all rows
-        for (row in grid) {
-            if (row.distinct().size != size) return false
-        }
+        println("=== isPuzzleComplete Debug ===")
+        println("Grid size: $size, Subgrid size: $subgridSize")
 
-        // Check all columns
+        // Step 1: Check all cells are filled with valid numbers (1 to size)
+        for (rowIndex in grid.indices) {
+            for (colIndex in grid[rowIndex].indices) {
+                val cell = grid[rowIndex][colIndex]
+                if (cell < 1 || cell > size) {
+                    println("FAIL: Cell ($rowIndex,$colIndex) has invalid value: $cell (expected 1-$size)")
+                    return false
+                }
+            }
+        }
+        println("✓ Step 1 passed: All cells have valid values 1-$size")
+
+        // Step 2: Check all rows have all numbers 1 to size exactly once
+        for (rowIndex in grid.indices) {
+            val row = grid[rowIndex]
+            println("Checking row $rowIndex: ${row.joinToString(", ")}")
+
+            // Check if row has all distinct values
+            if (row.distinct().size != size) {
+                println("FAIL: Row $rowIndex has duplicates. Distinct count: ${row.distinct().size}")
+                return false
+            }
+
+            // Check if row contains exactly numbers 1 to size
+            val sortedRow = row.sorted()
+            for (i in 0 until size) {
+                if (sortedRow[i] != i + 1) {
+                    println("FAIL: Row $rowIndex missing number ${i+1}. Sorted: ${sortedRow.joinToString(", ")}")
+                    return false
+                }
+            }
+        }
+        println("✓ Step 2 passed: All rows valid")
+
+        // Step 3: Check all columns have all numbers 1 to size exactly once
         for (col in 0 until size) {
             val column = grid.map { it[col] }
-            if (column.distinct().size != size) return false
-        }
+            println("Checking column $col: ${column.joinToString(", ")}")
 
-        // Check all subgrids
+            // Check if column has all distinct values
+            if (column.distinct().size != size) {
+                println("FAIL: Column $col has duplicates. Distinct count: ${column.distinct().size}")
+                return false
+            }
+
+            // Check if column contains exactly numbers 1 to size
+            val sortedColumn = column.sorted()
+            for (i in 0 until size) {
+                if (sortedColumn[i] != i + 1) {
+                    println("FAIL: Column $col missing number ${i+1}. Sorted: ${sortedColumn.joinToString(", ")}")
+                    return false
+                }
+            }
+        }
+        println("✓ Step 3 passed: All columns valid")
+
+        // Step 4: Check all subgrids have all numbers 1 to size exactly once
         for (boxRow in 0 until size step subgridSize) {
             for (boxCol in 0 until size step subgridSize) {
                 val box = mutableListOf<Int>()
@@ -269,9 +349,27 @@ class SudokuPuzzleViewModel @Inject constructor(
                         box.add(grid[boxRow + r][boxCol + c])
                     }
                 }
-                if (box.distinct().size != size) return false
+
+                println("Checking box at ($boxRow,$boxCol): ${box.joinToString(", ")}")
+
+                // Check if box has all distinct values
+                if (box.distinct().size != size) {
+                    println("FAIL: Box at ($boxRow,$boxCol) has duplicates. Distinct count: ${box.distinct().size}")
+                    return false
+                }
+
+                // Check if box contains exactly numbers 1 to size
+                val sortedBox = box.sorted()
+                for (i in 0 until size) {
+                    if (sortedBox[i] != i + 1) {
+                        println("FAIL: Box at ($boxRow,$boxCol) missing number ${i+1}. Sorted: ${sortedBox.joinToString(", ")}")
+                        return false
+                    }
+                }
             }
         }
+        println("✓ Step 4 passed: All boxes valid")
+        println("✓✓✓ Puzzle is COMPLETE! ✓✓✓")
 
         return true
     }

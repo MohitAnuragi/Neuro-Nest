@@ -29,9 +29,11 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.neuronest.R
 import com.example.neuronest.puzzlelevels.LevelCompleteDialog
+import com.example.neuronest.puzzlelevels.LevelDataStoreManager
 import com.example.neuronest.puzzlelevels.LevelProgressBar
 import com.example.neuronest.puzzlelevels.PuzzleTimer
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 data class LetterItem(
     val letter: Char,
@@ -49,6 +51,21 @@ fun WordScrambleScreen(
     onGoToGrid: () -> Unit = {}
 ) {
     val viewModel: WordScrambleViewModel = hiltViewModel()
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val dataStoreManager = remember { LevelDataStoreManager(context) }
+    val coroutineScope = rememberCoroutineScope()
+
+    // Tutorial state
+    val isTutorialCompleted by dataStoreManager.isTutorialCompletedFlow("WordScramble").collectAsState(initial = true)
+    var showTutorial by remember { mutableStateOf(false) }
+
+    // Show tutorial only on first launch and level 1
+    LaunchedEffect(level, isTutorialCompleted) {
+        if (level == 1 && !isTutorialCompleted) {
+            delay(500) // Brief delay before showing tutorial
+            showTutorial = true
+        }
+    }
 
     LaunchedEffect(level) {
         viewModel.loadLevel(level)
@@ -92,7 +109,7 @@ fun WordScrambleScreen(
             TopAppBar(
                 title = {
                     Text(
-                        "Word Scramble - Level $currentLevel",
+                        "Word Scramble",
                         color = Color.White,
                         fontWeight = FontWeight.Bold
                     )
@@ -147,7 +164,7 @@ fun WordScrambleScreen(
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
 
-                ScoreDisplay(score = score, isContentLoaded = isContentLoaded)
+                ScoreDisplay(currentLevel = currentLevel, isContentLoaded = isContentLoaded)
 
                 Text(
                     text = "Unscramble the word:",
@@ -295,6 +312,21 @@ fun WordScrambleScreen(
             isLastLevel = currentLevel >= 500
         )
     }
+
+    // Tutorial overlay
+    if (showTutorial) {
+        HowToPlayWordScrambleOverlay(
+            onDismiss = {
+                showTutorial = false
+                coroutineScope.launch {
+                    dataStoreManager.saveTutorialCompleted("WordScramble")
+                }
+            },
+            onPlaySound = {
+                viewModel.playSoundEffect(com.example.neuronest.sound.SoundType.BUTTON_CLICK)
+            }
+        )
+    }
 }
 
 @Composable
@@ -374,7 +406,7 @@ fun LetterButtons(
 }
 
 @Composable
-fun ScoreDisplay(score: Int, isContentLoaded: Boolean) {
+fun ScoreDisplay(currentLevel: Int, isContentLoaded: Boolean) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -400,7 +432,7 @@ fun ScoreDisplay(score: Int, isContentLoaded: Boolean) {
         contentAlignment = Alignment.Center
     ) {
         Text(
-            text = "Score: $score",
+            text = "Level: $currentLevel",
             color = Color.White,
             fontSize = 20.sp,
             fontWeight = FontWeight.Bold,

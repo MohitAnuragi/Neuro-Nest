@@ -13,3 +13,10 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Heap dump files (generated during OutOfMemory errors)
+*.hprof
+
+# Temporary scripts
+*.py
+*.ps1

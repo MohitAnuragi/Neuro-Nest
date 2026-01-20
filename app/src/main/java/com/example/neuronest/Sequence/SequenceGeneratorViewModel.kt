@@ -94,7 +94,9 @@ class SequenceGeneratorViewModel @Inject constructor(
             onIncorrectMove()
         }
     }
-
+    fun playSoundEffect(soundType: SoundType) {
+        soundManager.playSound(soundType)
+    }
     fun skipProblem() {
         if (_isLevelComplete.value) return
 

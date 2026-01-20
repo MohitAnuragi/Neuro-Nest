@@ -10,7 +10,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import javax.inject.Inject
-import kotlin.random.Random
 
 data class LogicPuzzle(
     val question: String,
@@ -48,6 +47,11 @@ class LogicPuzzleViewModel @Inject constructor(
 
     init {
         problemsRequired = 5 // 5 logic puzzles per level
+    }
+
+    // Public method to play sounds from UI
+    fun playSoundEffect(soundType: SoundType) {
+        soundManager.playSound(soundType)
     }
 
     override fun onLevelLoaded(level: Int) {

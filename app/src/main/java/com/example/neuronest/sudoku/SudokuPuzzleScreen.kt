@@ -12,8 +12,6 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -34,8 +32,10 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.neuronest.R
 import com.example.neuronest.puzzlelevels.LevelCompleteDialog
+import com.example.neuronest.puzzlelevels.LevelDataStoreManager
 import com.example.neuronest.puzzlelevels.PuzzleTimer
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlin.math.sqrt
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -48,7 +48,21 @@ fun SudokuPuzzleScreen(
     onGoToGrid: () -> Unit = {}
 ) {
     val viewModel: SudokuPuzzleViewModel = hiltViewModel()
-    var showHowToPlay by rememberSaveable { mutableStateOf(true) }
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val dataStoreManager = remember { LevelDataStoreManager(context) }
+    val coroutineScope = rememberCoroutineScope()
+
+    // Tutorial state
+    val isTutorialCompleted by dataStoreManager.isTutorialCompletedFlow("Sudoku").collectAsState(initial = true)
+    var showTutorial by remember { mutableStateOf(false) }
+
+    // Show tutorial only on first launch and level 1
+    LaunchedEffect(level, isTutorialCompleted) {
+        if (level == 1 && !isTutorialCompleted) {
+            delay(500) // Brief delay before showing tutorial
+            showTutorial = true
+        }
+    }
 
     LaunchedEffect(level) {
         viewModel.loadLevel(level)
@@ -77,7 +91,7 @@ fun SudokuPuzzleScreen(
             TopAppBar(
                 title = {
                     Text(
-                        "Sudoku - Level $currentLevel",
+                        "Sudoku Puzzle",
                         color = Color.White,
                         fontWeight = FontWeight.Bold
                     )
@@ -140,7 +154,7 @@ fun SudokuPuzzleScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                SudokuScoreDisplay(score = score, isContentLoaded = isContentLoaded)
+                SudokuScoreDisplay(currentLevel = currentLevel, isContentLoaded = isContentLoaded)
 
                 if (feedback.isNotEmpty()) {
                     SudokuFeedback(feedback = feedback, isContentLoaded = isContentLoaded)
@@ -153,7 +167,15 @@ fun SudokuPuzzleScreen(
                     selectedCell = selectedCell,
                     onCellClick = { row, col -> viewModel.selectCell(row, col) },
                     onCellValueChange = { row, col, value ->
-                        if (value.isNotEmpty()) {
+                        // Ensure cell is selected before setting value
+                        if (selectedCell != Pair(row, col)) {
+                            viewModel.selectCell(row, col)
+                        }
+
+                        if (value.isEmpty()) {
+                            // Clear the cell
+                            viewModel.clearCell()
+                        } else {
                             val num = value.toIntOrNull()
                             if (num != null && num in 1..gridSize) {
                                 viewModel.setCellValue(num)
@@ -238,6 +260,21 @@ fun SudokuPuzzleScreen(
             },
             showNextButton = currentLevel < 500,
             isLastLevel = currentLevel >= 500
+        )
+    }
+
+    // Tutorial overlay
+    if (showTutorial) {
+        HowToPlaySudokuOverlay(
+            onDismiss = {
+                showTutorial = false
+                coroutineScope.launch {
+                    dataStoreManager.saveTutorialCompleted("Sudoku")
+                }
+            },
+            onPlaySound = {
+                viewModel.playSoundEffect(com.example.neuronest.sound.SoundType.BUTTON_CLICK)
+            }
         )
     }
 }
@@ -444,7 +481,7 @@ fun SudokuNumberPad(
 }
 
 @Composable
-fun SudokuScoreDisplay(score: Int, isContentLoaded: Boolean) {
+fun SudokuScoreDisplay(currentLevel: Int, isContentLoaded: Boolean) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -470,7 +507,7 @@ fun SudokuScoreDisplay(score: Int, isContentLoaded: Boolean) {
         contentAlignment = Alignment.Center
     ) {
         Text(
-            text = "Score: $score",
+            text = "Level: $currentLevel",
             color = Color.White,
             fontSize = 20.sp,
             fontWeight = FontWeight.Bold,

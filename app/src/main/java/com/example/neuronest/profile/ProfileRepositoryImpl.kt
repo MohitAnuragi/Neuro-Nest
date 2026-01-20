@@ -217,13 +217,23 @@ class ProfileRepositoryImpl @Inject constructor(
 
 
 
-    override  suspend fun getOrCreateProfile(): UserProfile {
-        var profile = profileDao.getProfile("NOT FOUND USER ID")
+    override suspend fun getOrCreateProfile(): UserProfile {
+        var profile = profileDao.getProfile("default_user")
         if (profile == null) {
             profile = UserProfile()
             profileDao.insertProfile(profile)
         }
         return profile
+    }
+
+    // NEW: Room-based profile persistence methods
+    suspend fun updateProfileDetails(displayName: String, imageUri: String) {
+        profileDao.updateProfileDetails("default_user", displayName, imageUri)
+    }
+
+    suspend fun isProfileSetupComplete(): Boolean {
+        val profile = profileDao.getProfile("default_user")
+        return profile != null && profile.displayName.isNotEmpty() && profile.displayName != "Guest User"
     }
 
 }

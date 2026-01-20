@@ -1,7 +1,5 @@
 package com.example.neuronest.profile
 
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.net.Uri
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -30,15 +28,12 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TileMode
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.rememberAsyncImagePainter
 import com.example.neuronest.R
-import java.io.InputStream
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -58,18 +53,15 @@ private fun Double.format(decimalPlaces: Int): String {
 @Composable
 fun ProfileScreen(
     viewModel: ProfileViewModel = hiltViewModel(),
-    onSignOut: () -> Unit = {}
+    onSignOut: () -> Unit = {},
+    onEditProfile: () -> Unit = {}
 ) {
-    val context = LocalContext.current
-    val userPreferences = remember { com.example.neuronest.data.UserPreferences(context) }
-
     val profile by viewModel.profile.collectAsState()
-    val userName: String? by userPreferences.userName.collectAsState(initial = null)
-    val profileImageUri: String? by userPreferences.profileImageUri.collectAsState(initial = null)
     var isContentLoaded by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
-        // Simulate loading delay for animations
+        // Refresh profile data and simulate loading delay for animations
+        viewModel.refresh()
         kotlinx.coroutines.delay(300)
         isContentLoaded = true
     }
@@ -85,6 +77,19 @@ fun ProfileScreen(
                     )
                 },
                 actions = {
+                    IconButton(
+                        onClick = onEditProfile,
+                        modifier = Modifier.scale(animateFloatAsState(
+                            targetValue = if (isContentLoaded) 1f else 0.8f,
+                            animationSpec = tween(durationMillis = 500)
+                        ).value)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Person,
+                            contentDescription = "Edit Profile",
+                            tint = Color.White
+                        )
+                    }
                     IconButton(
                         onClick = onSignOut,
                         modifier = Modifier.scale(animateFloatAsState(
@@ -141,7 +146,7 @@ fun ProfileScreen(
                             animationSpec = tween(durationMillis = 800)
                         ).value)
                 ) {
-                    ProfileHeader(profile, isContentLoaded, userName ?: "", profileImageUri ?: "")
+                    ProfileHeader(profile, isContentLoaded)
                 }
 
                 Spacer(modifier = Modifier.height(24.dp))
@@ -162,9 +167,7 @@ fun ProfileScreen(
 }
 
 @Composable
-fun ProfileHeader(profile: UserProfile?, isContentLoaded: Boolean, userName: String, profileImageUri: String) {
-    val context = LocalContext.current
-
+fun ProfileHeader(profile: UserProfile?, isContentLoaded: Boolean) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -213,11 +216,11 @@ fun ProfileHeader(profile: UserProfile?, isContentLoaded: Boolean, userName: Str
                         .clip(CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
-                    if (profileImageUri.isNotEmpty() && profileImageUri != "null") {
+                    if (!profile?.profileImageUri.isNullOrEmpty() && profile?.profileImageUri != "null") {
                         // Use Coil's AsyncImage for better image loading
                         Image(
                             painter = rememberAsyncImagePainter(
-                                model = Uri.parse(profileImageUri)
+                                model = Uri.parse(profile?.profileImageUri)
                             ),
                             contentDescription = "Profile Image",
                             modifier = Modifier.fillMaxSize(),
@@ -237,8 +240,8 @@ fun ProfileHeader(profile: UserProfile?, isContentLoaded: Boolean, userName: Str
 
                 // Display name
                 Text(
-                    text = if (userName.isNotEmpty()) {
-                        userName
+                    text = if (!profile?.displayName.isNullOrEmpty() && profile?.displayName != "Guest User") {
+                        profile?.displayName ?: "Guest"
                     } else {
                         "Guest"
                     },

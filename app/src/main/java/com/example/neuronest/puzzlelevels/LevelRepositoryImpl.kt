@@ -143,7 +143,7 @@ class LevelRepositoryImpl @Inject constructor(
     }
 
     override suspend fun resetAllProgress() {
-        val puzzleTypes = listOf("Arithmetic", "WordScramble", "MissingNumber", "Sequence", "Futoshiki", "Sudoku", "Cryptic", "Logic")
+        val puzzleTypes = listOf("Arithmetic", "WordScramble", "Connection", "Sequence", "Sudoku", "Logic")
         puzzleTypes.forEach { resetLevelProgress(it) }
     }
 
