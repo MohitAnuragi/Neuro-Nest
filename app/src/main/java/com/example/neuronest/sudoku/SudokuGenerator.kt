@@ -59,22 +59,34 @@ class SudokuGenerator {
      * Checks if a move is valid based on Sudoku rules.
      */
     fun isValidMove(grid: List<List<Int>>, row: Int, col: Int, number: Int, size: Int): Boolean {
-        // Check row and column
+        // Check row for duplicates (excluding current position)
         for (i in 0 until size) {
-            if (grid[row][i] == number || grid[i][col] == number) {
+            if (i != col && grid[row][i] == number) {
                 return false
             }
         }
 
-        // Check subgrid
+        // Check column for duplicates (excluding current position)
+        for (i in 0 until size) {
+            if (i != row && grid[i][col] == number) {
+                return false
+            }
+        }
+
+        // Check subgrid for duplicates (excluding current position)
         val subgridSize = sqrt(size.toDouble()).toInt()
         val startRow = row - row % subgridSize
         val startCol = col - col % subgridSize
 
         for (i in 0 until subgridSize) {
             for (j in 0 until subgridSize) {
-                if (grid[i + startRow][j + startCol] == number) {
-                    return false
+                val currentRow = i + startRow
+                val currentCol = j + startCol
+                // Skip the current cell position
+                if (currentRow != row || currentCol != col) {
+                    if (grid[currentRow][currentCol] == number) {
+                        return false
+                    }
                 }
             }
         }

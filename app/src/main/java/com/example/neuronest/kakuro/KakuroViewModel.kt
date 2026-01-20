@@ -41,6 +41,11 @@ class KakuroViewModel @Inject constructor(
         problemsRequired = 3 // 3 Kakuro puzzles per level like other puzzles
     }
 
+    // Public method to play sounds from UI
+    fun playSoundEffect(soundType: SoundType) {
+        soundManager.playSound(soundType)
+    }
+
     override fun onLevelLoaded(level: Int) {
         loadPuzzleForLevel(level)
         puzzleStartTime = System.currentTimeMillis()
@@ -333,4 +338,3 @@ class KakuroViewModel @Inject constructor(
         }
     }
 }
-

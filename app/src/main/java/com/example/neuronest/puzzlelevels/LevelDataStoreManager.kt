@@ -4,6 +4,7 @@ package com.example.neuronest.puzzlelevels
 import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
@@ -38,6 +39,21 @@ class LevelDataStoreManager @Inject constructor(
         val key = intPreferencesKey("max_unlocked_${puzzleType}")
         return context.dataStore.data.map { preferences ->
             preferences[key] ?: 1
+        }
+    }
+
+    // Tutorial completion methods
+    suspend fun saveTutorialCompleted(puzzleType: String) {
+        val key = booleanPreferencesKey("tutorial_completed_${puzzleType}")
+        context.dataStore.edit { preferences ->
+            preferences[key] = true
+        }
+    }
+
+    fun isTutorialCompletedFlow(puzzleType: String): Flow<Boolean> {
+        val key = booleanPreferencesKey("tutorial_completed_${puzzleType}")
+        return context.dataStore.data.map { preferences ->
+            preferences[key] ?: false
         }
     }
 }

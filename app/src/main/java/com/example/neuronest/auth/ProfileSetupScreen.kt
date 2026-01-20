@@ -26,7 +26,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -47,8 +46,6 @@ fun ProfileSetupScreen(
     viewModel: ProfileViewModel = hiltViewModel(),
     onProfileSetupComplete: () -> Unit
 ) {
-    val context = LocalContext.current
-    val userPreferences = remember { com.example.neuronest.data.UserPreferences(context) }
     val coroutineScope = rememberCoroutineScope()
 
     val profile by viewModel.profile.collectAsState()
@@ -146,22 +143,15 @@ fun ProfileSetupScreen(
                     displayName = displayName,
                     isContentLoaded = isContentLoaded,
                     onSave = {
-                        // Save to both ViewModel and DataStore
+                        // Save to Room database via ViewModel
                         viewModel.updateProfileDetails(
                             displayName,
                             selectedImageUri?.toString() ?: ""
                         )
-
-                        // Save to DataStore for persistent storage
-                        coroutineScope.launch {
-                            userPreferences.saveUserName(displayName)
-                            userPreferences.saveProfileImageUri(selectedImageUri?.toString() ?: "")
-                        }
-
                         onProfileSetupComplete()
                     },
                     onSkip = {
-                        // Even when skipping, we can still update later from Profile screen
+                        // Mark as setup complete even when skipping
                         viewModel.updateProfileDetails("Guest User", "")
                         onProfileSetupComplete()
                     }
@@ -169,9 +159,17 @@ fun ProfileSetupScreen(
             }
         }
 
+        // Image Picker Dialog
         if (showImagePicker) {
-            ImagePickerDialog { uri ->
+            val imagePickerLauncher = rememberLauncherForActivityResult(
+                contract = ActivityResultContracts.GetContent()
+            ) { uri: Uri? ->
                 selectedImageUri = uri
+                showImagePicker = false
+            }
+
+            LaunchedEffect(showImagePicker) {
+                imagePickerLauncher.launch("image/*")
                 showImagePicker = false
             }
         }
@@ -186,10 +184,13 @@ fun ProfileImageSection(
 ) {
     Card(
         modifier = Modifier
-            .scale(animateFloatAsState(
-                targetValue = if (isContentLoaded) 1f else 0.9f,
-                animationSpec = androidx.compose.animation.core.tween(durationMillis = 600)
-            ).value)
+            .fillMaxWidth()
+            .scale(
+                animateFloatAsState(
+                    targetValue = if (isContentLoaded) 1f else 0.9f,
+                    animationSpec = androidx.compose.animation.core.tween(durationMillis = 600)
+                ).value
+            )
             .shadow(
                 elevation = 16.dp,
                 shape = RoundedCornerShape(24.dp),
@@ -199,6 +200,7 @@ fun ProfileImageSection(
     ) {
         Box(
             modifier = Modifier
+                .fillMaxWidth()
                 .background(
                     brush = Brush.linearGradient(
                         colors = listOf(Color(0xFF2C1810), Color(0xFF4A2C1D)),
@@ -285,16 +287,18 @@ fun NameInputSection(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .scale(animateFloatAsState(
-                targetValue = if (isContentLoaded) 1f else 0.9f,
-                animationSpec = androidx.compose.animation.core.tween(durationMillis = 600, delayMillis = 100)
-            ).value)
+            .scale(
+                animateFloatAsState(
+                    targetValue = if (isContentLoaded) 1f else 0.9f,
+                    animationSpec = androidx.compose.animation.core.tween(durationMillis = 600, delayMillis = 100)
+                ).value
+            )
             .shadow(
                 elevation = 16.dp,
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(24.dp),
                 spotColor = Color(0xFFFFD700)
             ),
-        shape = RoundedCornerShape(16.dp)
+        shape = RoundedCornerShape(24.dp)
     ) {
         Box(
             modifier = Modifier
@@ -308,7 +312,8 @@ fun NameInputSection(
                 .padding(24.dp)
         ) {
             Column(
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                horizontalAlignment = Alignment.Start,
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Text(
                     text = "Your Name",
@@ -320,19 +325,18 @@ fun NameInputSection(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .height(60.dp)
                         .background(
-                            color = Color(0xFF2C1810),
+                            color = Color(0xFF1A0F0A),
                             shape = RoundedCornerShape(12.dp)
                         )
                         .border(
                             width = 2.dp,
-                            brush = Brush.linearGradient(
-                                colors = listOf(Color(0xFFD4AF37), Color(0xFFFFD700)),
-                                tileMode = TileMode.Repeated
-                            ),
+                            color = Color(0xFFD4AF37),
                             shape = RoundedCornerShape(12.dp)
                         )
-                        .padding(4.dp)
+                        .padding(horizontal = 16.dp),
+                    contentAlignment = Alignment.CenterStart
                 ) {
                     BasicTextField(
                         value = displayName,
@@ -344,7 +348,6 @@ fun NameInputSection(
                         ),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(60.dp)
                             .padding(horizontal = 16.dp),
                         singleLine = true,
                         decorationBox = { innerTextField ->
@@ -425,16 +428,3 @@ fun ActionButtonsSection(
     }
 }
 
-@Composable
-fun ImagePickerDialog(onImageSelected: (Uri) -> Unit) {
-    val context = LocalContext.current
-    val launcher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
-    ) { uri: Uri? ->
-        uri?.let { onImageSelected(it) }
-    }
-
-    LaunchedEffect(Unit) {
-        launcher.launch("image/*")
-    }
-}

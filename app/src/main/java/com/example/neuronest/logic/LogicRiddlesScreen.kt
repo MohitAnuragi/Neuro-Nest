@@ -29,9 +29,11 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.neuronest.R
 import com.example.neuronest.puzzlelevels.LevelCompleteDialog
+import com.example.neuronest.puzzlelevels.LevelDataStoreManager
 import com.example.neuronest.puzzlelevels.LevelProgressBar
 import com.example.neuronest.puzzlelevels.PuzzleTimer
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -43,6 +45,21 @@ fun LogicRiddlesScreen(
     onGoToGrid: () -> Unit = {}
 ) {
     val viewModel: LogicPuzzleViewModel = hiltViewModel()
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val dataStoreManager = remember { LevelDataStoreManager(context) }
+    val coroutineScope = rememberCoroutineScope()
+
+    // Tutorial state
+    val isTutorialCompleted by dataStoreManager.isTutorialCompletedFlow("LogicPuzzles").collectAsState(initial = true)
+    var showTutorial by remember { mutableStateOf(false) }
+
+    // Show tutorial only on first launch and level 1
+    LaunchedEffect(level, isTutorialCompleted) {
+        if (level == 1 && !isTutorialCompleted) {
+            delay(500) // Brief delay before showing tutorial
+            showTutorial = true
+        }
+    }
 
     LaunchedEffect(level) {
         viewModel.loadLevel(level)
@@ -73,7 +90,7 @@ fun LogicRiddlesScreen(
             TopAppBar(
                 title = {
                     Text(
-                        "Logic Puzzles - Level $currentLevel",
+                        "Logic Puzzles",
                         color = Color.White,
                         fontWeight = FontWeight.Bold
                     )
@@ -135,7 +152,7 @@ fun LogicRiddlesScreen(
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
 
-                LogicScoreDisplay(score = score, isContentLoaded = isContentLoaded)
+                LogicScoreDisplay(currentLevel = currentLevel, isContentLoaded = isContentLoaded)
 
                 currentPuzzle?.let { puzzle ->
                     LogicPuzzleDisplay(
@@ -234,6 +251,21 @@ fun LogicRiddlesScreen(
             },
             showNextButton = currentLevel < 500,
             isLastLevel = currentLevel >= 500
+        )
+    }
+
+    // Tutorial overlay
+    if (showTutorial) {
+        HowToPlayLogicOverlay(
+            onDismiss = {
+                showTutorial = false
+                coroutineScope.launch {
+                    dataStoreManager.saveTutorialCompleted("LogicPuzzles")
+                }
+            },
+            onPlaySound = {
+                viewModel.playSoundEffect(com.example.neuronest.sound.SoundType.BUTTON_CLICK)
+            }
         )
     }
 }
@@ -352,7 +384,7 @@ fun LogicOptionButtons(
 }
 
 @Composable
-fun LogicScoreDisplay(score: Int, isContentLoaded: Boolean) {
+fun LogicScoreDisplay(currentLevel: Int, isContentLoaded: Boolean) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -378,7 +410,7 @@ fun LogicScoreDisplay(score: Int, isContentLoaded: Boolean) {
         contentAlignment = Alignment.Center
     ) {
         Text(
-            text = "Score: $score",
+            text = "Level: $currentLevel",
             color = Color.White,
             fontSize = 20.sp,
             fontWeight = FontWeight.Bold,

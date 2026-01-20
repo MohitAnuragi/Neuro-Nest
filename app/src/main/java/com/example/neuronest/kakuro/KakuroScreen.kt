@@ -13,7 +13,6 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -34,9 +33,11 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.neuronest.R
 import com.example.neuronest.puzzlelevels.LevelCompleteDialog
+import com.example.neuronest.puzzlelevels.LevelDataStoreManager
 import com.example.neuronest.puzzlelevels.LevelProgressBar
 import com.example.neuronest.puzzlelevels.PuzzleTimer
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -48,6 +49,21 @@ fun KakuroScreen(
     onGoToGrid: () -> Unit = {}
 ) {
     val viewModel: KakuroViewModel = hiltViewModel()
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val dataStoreManager = remember { LevelDataStoreManager(context) }
+    val coroutineScope = rememberCoroutineScope()
+
+    // Tutorial state
+    val isTutorialCompleted by dataStoreManager.isTutorialCompletedFlow("Kakuro").collectAsState(initial = true)
+    var showTutorial by remember { mutableStateOf(false) }
+
+    // Show tutorial only on first launch and level 1
+    LaunchedEffect(level, isTutorialCompleted) {
+        if (level == 1 && !isTutorialCompleted) {
+            delay(500) // Brief delay before showing tutorial
+            showTutorial = true
+        }
+    }
 
     LaunchedEffect(level) {
         viewModel.loadLevel(level)
@@ -77,7 +93,7 @@ fun KakuroScreen(
             TopAppBar(
                 title = {
                     Text(
-                        "Kakuro - Level $currentLevel",
+                        "Kakuro Puzzle",
                         color = Color.White,
                         fontWeight = FontWeight.Bold
                     )
@@ -97,13 +113,6 @@ fun KakuroScreen(
                             imageVector = Icons.Default.Lightbulb,
                             contentDescription = "Hint",
                             tint = Color(0xFFFFD700)
-                        )
-                    }
-                    IconButton(onClick = { viewModel.clearCell() }) {
-                        Icon(
-                            imageVector = Icons.Default.Delete,
-                            contentDescription = "Clear",
-                            tint = Color.White
                         )
                     }
                     PuzzleTimer(
@@ -146,7 +155,7 @@ fun KakuroScreen(
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
 
-                KakuroScoreDisplay(score = score, isContentLoaded = isContentLoaded)
+                KakuroScoreDisplay(currentLevel = currentLevel, isContentLoaded = isContentLoaded)
 
                 if (feedback.isNotEmpty()) {
                     KakuroFeedback(
@@ -241,6 +250,21 @@ fun KakuroScreen(
             },
             showNextButton = currentLevel < 500,
             isLastLevel = currentLevel >= 500
+        )
+    }
+
+    // Tutorial overlay
+    if (showTutorial) {
+        HowToPlayKakuroOverlay(
+            onDismiss = {
+                showTutorial = false
+                coroutineScope.launch {
+                    dataStoreManager.saveTutorialCompleted("Kakuro")
+                }
+            },
+            onPlaySound = {
+                viewModel.playSoundEffect(com.example.neuronest.sound.SoundType.BUTTON_CLICK)
+            }
         )
     }
 }
@@ -420,7 +444,7 @@ fun KakuroPlayCell(
 }
 
 @Composable
-fun KakuroScoreDisplay(score: Int, isContentLoaded: Boolean) {
+fun KakuroScoreDisplay(currentLevel: Int, isContentLoaded: Boolean) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -446,7 +470,7 @@ fun KakuroScoreDisplay(score: Int, isContentLoaded: Boolean) {
         contentAlignment = Alignment.Center
     ) {
         Text(
-            text = "Score: $score",
+            text = "Level: $currentLevel",
             color = Color.White,
             fontSize = 20.sp,
             fontWeight = FontWeight.Bold,

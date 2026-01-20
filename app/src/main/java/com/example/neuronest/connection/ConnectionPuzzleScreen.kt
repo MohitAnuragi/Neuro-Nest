@@ -26,17 +26,27 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.preferencesDataStore
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.neuronest.R
 import com.example.neuronest.puzzlelevels.LevelCompleteDialog
 import com.example.neuronest.puzzlelevels.LevelProgressBar
 import com.example.neuronest.puzzlelevels.PuzzleTimer
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
+
+private val android.content.Context.connectionTutorialDataStore by preferencesDataStore(name = "connection_tutorial_prefs")
+private val TUTORIAL_COMPLETED_KEY = booleanPreferencesKey("connection_tutorial_completed")
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -48,6 +58,24 @@ fun ConnectionPuzzleScreen(
     onGoToGrid: () -> Unit = {}
 ) {
     val viewModel: ConnectionPuzzleViewModel = hiltViewModel()
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+
+    // Tutorial state
+    var showTutorial by remember { mutableStateOf(false) }
+    var tutorialCheckDone by remember { mutableStateOf(false) }
+
+    // Check if tutorial was already shown
+    LaunchedEffect(Unit) {
+        val tutorialCompleted = context.connectionTutorialDataStore.data.map { prefs ->
+            prefs[TUTORIAL_COMPLETED_KEY] ?: false
+        }.first()
+
+        if (!tutorialCompleted && level == 1) {
+            showTutorial = true
+        }
+        tutorialCheckDone = true
+    }
 
     LaunchedEffect(level) {
         viewModel.loadLevel(level)
@@ -79,7 +107,7 @@ fun ConnectionPuzzleScreen(
             TopAppBar(
                 title = {
                     Text(
-                        "Connections - Level $currentLevel",
+                        "Connections Puzzle",
                         color = Color.White,
                         fontWeight = FontWeight.Bold
                     )
@@ -99,13 +127,6 @@ fun ConnectionPuzzleScreen(
                             imageVector = Icons.Default.Lightbulb,
                             contentDescription = "Hint",
                             tint = Color(0xFFFFD700)
-                        )
-                    }
-                    IconButton(onClick = { viewModel.shuffleWords() }) {
-                        Icon(
-                            imageVector = Icons.Default.Refresh,
-                            contentDescription = "Shuffle",
-                            tint = Color.White
                         )
                     }
                     PuzzleTimer(
@@ -150,7 +171,7 @@ fun ConnectionPuzzleScreen(
                 )
 
                 ConnectionScoreDisplay(
-                    score = score,
+                    currentLevel = currentLevel,
                     mistakes = mistakesRemaining,
                     isContentLoaded = isContentLoaded
                 )
@@ -237,6 +258,20 @@ fun ConnectionPuzzleScreen(
                         Text("SUBMIT", fontWeight = FontWeight.Bold)
                     }
                 }
+//                Button(
+//                    onClick = {  },
+//                    enabled = selectedWords.size == 4,
+//                    modifier = Modifier
+//                        .weight(1f)
+//                        .height(56.dp),
+//                    colors = ButtonDefaults.buttonColors(
+//                        containerColor = Color(0xFFD4AF37),
+//                        contentColor = Color(0xFF2C1810)
+//                    ),
+//                    shape = RoundedCornerShape(12.dp)
+//                ) {
+//                    Text("HOW TO PLAY", fontWeight = FontWeight.Bold)
+//                }
             }
         }
     }
@@ -268,6 +303,22 @@ fun ConnectionPuzzleScreen(
             },
             showNextButton = currentLevel < 500,
             isLastLevel = currentLevel >= 500
+        )
+    }
+
+    // Show tutorial overlay if first time playing
+    if (showTutorial && tutorialCheckDone) {
+        ConnectionsTutorialOverlay(
+            soundManager = viewModel.soundManager,
+            onDismiss = {
+                showTutorial = false
+                // Mark tutorial as completed
+                coroutineScope.launch {
+                    context.connectionTutorialDataStore.edit { prefs ->
+                        prefs[TUTORIAL_COMPLETED_KEY] = true
+                    }
+                }
+            }
         )
     }
 }
@@ -342,7 +393,7 @@ fun SolvedCategoryDisplay(category: ConnectionCategory) {
 }
 
 @Composable
-fun ConnectionScoreDisplay(score: Int, mistakes: Int, isContentLoaded: Boolean) {
+fun ConnectionScoreDisplay(currentLevel: Int, mistakes: Int, isContentLoaded: Boolean) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -372,7 +423,7 @@ fun ConnectionScoreDisplay(score: Int, mistakes: Int, isContentLoaded: Boolean) 
             contentAlignment = Alignment.Center
         ) {
             Text(
-                text = "Score: $score",
+                text = "Level: $currentLevel",
                 color = Color.White,
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold

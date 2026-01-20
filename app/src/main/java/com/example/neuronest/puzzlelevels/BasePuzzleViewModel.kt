@@ -17,7 +17,7 @@ import kotlinx.coroutines.launch
 abstract class BasePuzzleViewModel(
     private val levelRepository: LevelRepository,
     private val profileRepository: ProfileRepository,
-    protected val soundManager: SoundManager
+    val soundManager: SoundManager
 ) : ViewModel() {
 
     abstract val puzzleType: String

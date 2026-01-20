@@ -35,9 +35,9 @@ class ProfileViewModel @Inject constructor(
     val needsProfileSetup: StateFlow<Boolean> = _needsProfileSetup.asStateFlow()
 
     init {
+        checkProfileSetup()
         loadProfile()
         loadAchievements()
-        checkProfileSetup()
     }
 
     private fun checkProfileSetup() {
@@ -112,13 +112,9 @@ class ProfileViewModel @Inject constructor(
 
     fun updateProfileDetails(displayName: String, imageUri: String) {
         viewModelScope.launch {
-            // Save to DataStore
-            val userPreferences = com.example.neuronest.data.UserPreferences(context)
-            userPreferences.saveUserName(displayName)
-            userPreferences.saveProfileImageUri(imageUri)
-
-            // Update profile in database if needed
-//            profileRepository.updateProfileDetails(displayName, imageUri)
+            // Save to Room database
+            val repository = profileRepository as ProfileRepositoryImpl
+            repository.updateProfileDetails(displayName, imageUri)
 
             // Refresh profile and check setup status
             loadProfile()
