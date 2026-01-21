@@ -1,8 +1,10 @@
 package com.example.neuronest.auth
 
+import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.result.PickVisualMediaRequest
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -26,13 +28,16 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.rememberAsyncImagePainter
+import coil.request.ImageRequest
 import com.example.neuronest.R
 import com.example.neuronest.profile.ProfileViewModel
 import com.example.neuronest.profile.UserProfile
@@ -47,31 +52,35 @@ fun ProfileSetupScreen(
     onProfileSetupComplete: () -> Unit
 ) {
     val coroutineScope = rememberCoroutineScope()
+    val context = LocalContext.current
 
     val profile by viewModel.profile.collectAsState()
-    var displayName by remember { mutableStateOf(profile?.displayName ?: "") }
+    var displayName by remember { mutableStateOf("") }
     var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
     var showImagePicker by remember { mutableStateOf(false) }
-
     var isContentLoaded by remember { mutableStateOf(false) }
 
+    // Load profile data when screen opens
     LaunchedEffect(Unit) {
         delay(300)
         isContentLoaded = true
     }
 
+    // Update UI when profile data loads from database
     LaunchedEffect(profile) {
-        if (profile?.profileImageUri?.isNotEmpty() == true) {
-            try {
-                selectedImageUri = Uri.parse(profile?.profileImageUri)
-            } catch (_: Exception) {
-                // Handle error
+        profile?.let { userProfile ->
+            // Load display name
+            if (userProfile.displayName.isNotBlank() && userProfile.displayName != "Guest User") {
+                displayName = userProfile.displayName
             }
-        }
-        // Pre-fill display name if it exists
-        profile?.displayName?.let {
-            if (it.isNotBlank() && it != "Guest User") {
-                displayName = it
+
+            // Load profile image URI
+            if (userProfile.profileImageUri.isNotEmpty() && userProfile.profileImageUri != "null") {
+                try {
+                    selectedImageUri = Uri.parse(userProfile.profileImageUri)
+                } catch (e: Exception) {
+                    selectedImageUri = null
+                }
             }
         }
     }
@@ -162,15 +171,28 @@ fun ProfileSetupScreen(
         // Image Picker Dialog
         if (showImagePicker) {
             val imagePickerLauncher = rememberLauncherForActivityResult(
-                contract = ActivityResultContracts.GetContent()
-            ) { uri: Uri? ->
-                selectedImageUri = uri
-                showImagePicker = false
-            }
+                contract = ActivityResultContracts.PickVisualMedia(),
+                onResult = { uri: Uri? ->
+                    if (uri != null) {
+                        try {
+                            // Take persistent permission for the URI
+                            val flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
+                            context.contentResolver.takePersistableUriPermission(uri, flags)
+                        } catch (e: Exception) {
+                            // Some content providers don't support persistent permissions
+                            // but we can still use the URI
+                        }
+                        // Update local state to show image immediately
+                        selectedImageUri = uri
+                    }
+                    showImagePicker = false
+                }
+            )
 
-            LaunchedEffect(showImagePicker) {
-                imagePickerLauncher.launch("image/*")
-                showImagePicker = false
+            LaunchedEffect(Unit) {
+                imagePickerLauncher.launch(
+                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                )
             }
         }
     }
@@ -207,7 +229,8 @@ fun ProfileImageSection(
                         tileMode = TileMode.Repeated
                     )
                 )
-                .padding(24.dp)
+                .padding(24.dp),
+            contentAlignment = Alignment.Center
         ) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -217,7 +240,8 @@ fun ProfileImageSection(
                     text = "Profile Picture",
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color.White
+                    color = Color.White,
+                    textAlign = TextAlign.Center
                 )
 
                 Box(
@@ -249,7 +273,11 @@ fun ProfileImageSection(
                 ) {
                     if (selectedImageUri != null) {
                         Image(
-                            painter = rememberAsyncImagePainter(selectedImageUri),
+                            painter = rememberAsyncImagePainter(
+                                model = selectedImageUri,
+                                error = painterResource(id = R.drawable.ic_launcher_foreground),
+                                placeholder = painterResource(id = R.drawable.ic_launcher_foreground)
+                            ),
                             contentDescription = "Profile Image",
                             modifier = Modifier
                                 .fillMaxSize()
@@ -260,7 +288,7 @@ fun ProfileImageSection(
                         Icon(
                             imageVector = Icons.Default.Person,
                             contentDescription = "Add Profile Image",
-                            modifier = Modifier.size(60.dp),
+                            modifier = Modifier.size(48.dp),
                             tint = Color(0xFFD4AF37)
                         )
                     }
@@ -271,7 +299,8 @@ fun ProfileImageSection(
                     text = "Tap to change photo",
                     fontSize = 14.sp,
                     color = Color(0xFFD4AF37),
-                    fontWeight = FontWeight.Medium
+                    fontWeight = FontWeight.Medium,
+                    textAlign = TextAlign.Center
                 )
             }
         }
@@ -290,7 +319,10 @@ fun NameInputSection(
             .scale(
                 animateFloatAsState(
                     targetValue = if (isContentLoaded) 1f else 0.9f,
-                    animationSpec = androidx.compose.animation.core.tween(durationMillis = 600, delayMillis = 100)
+                    animationSpec = androidx.compose.animation.core.tween(
+                        durationMillis = 600,
+                        delayMillis = 100
+                    )
                 ).value
             )
             .shadow(
@@ -383,10 +415,15 @@ fun ActionButtonsSection(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .scale(animateFloatAsState(
-                targetValue = if (isContentLoaded) 1f else 0.9f,
-                animationSpec = androidx.compose.animation.core.tween(durationMillis = 600, delayMillis = 200)
-            ).value),
+            .scale(
+                animateFloatAsState(
+                    targetValue = if (isContentLoaded) 1f else 0.9f,
+                    animationSpec = androidx.compose.animation.core.tween(
+                        durationMillis = 600,
+                        delayMillis = 200
+                    )
+                ).value
+            ),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
@@ -427,4 +464,3 @@ fun ActionButtonsSection(
         }
     }
 }
-

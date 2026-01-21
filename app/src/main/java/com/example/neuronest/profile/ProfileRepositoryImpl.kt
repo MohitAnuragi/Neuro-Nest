@@ -18,6 +18,8 @@ class ProfileRepositoryImpl @Inject constructor(
 
     private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "user_profile")
 
+    private val DEFAULT_USER_ID = "default_user"
+
     // Keys for level system
     private object LevelKeys {
         // Pattern: "LEVEL_{puzzleType}_{levelNumber}_{property}"
@@ -218,22 +220,46 @@ class ProfileRepositoryImpl @Inject constructor(
 
 
     override suspend fun getOrCreateProfile(): UserProfile {
-        var profile = profileDao.getProfile("default_user")
+        var profile = profileDao.getProfile(DEFAULT_USER_ID)
         if (profile == null) {
-            profile = UserProfile()
+            // Create new profile with isProfileSetup = false
+            profile = UserProfile(
+                userId = DEFAULT_USER_ID,
+                isProfileSetup = false,
+                joinDate = System.currentTimeMillis()
+            )
             profileDao.insertProfile(profile)
         }
         return profile
     }
 
     // NEW: Room-based profile persistence methods
-    suspend fun updateProfileDetails(displayName: String, imageUri: String) {
-        profileDao.updateProfileDetails("default_user", displayName, imageUri)
+    override suspend fun updateProfileDetails(displayName: String, imageUri: String) {
+        // Get or create profile first
+        val currentProfile = getOrCreateProfile()
+
+        // Determine if profile should be marked as setup complete
+        val isSetupComplete = displayName.isNotBlank()
+
+        // Update profile with new details and setup flag
+        profileDao.updateProfileDetails(DEFAULT_USER_ID, displayName, imageUri, isSetupComplete)
     }
 
-    suspend fun isProfileSetupComplete(): Boolean {
-        val profile = profileDao.getProfile("default_user")
-        return profile != null && profile.displayName.isNotEmpty() && profile.displayName != "Guest User"
+    override suspend fun isProfileSetupComplete(): Boolean {
+        val profile = profileDao.getProfile(DEFAULT_USER_ID)
+        // Check the explicit isProfileSetup flag
+        return profile?.isProfileSetup == true
+    }
+
+    override suspend fun resetProfile() {
+        val resetProfile = UserProfile(
+            userId = DEFAULT_USER_ID,
+            displayName = "",
+            profileImageUri = "",
+            isProfileSetup = false,
+            joinDate = System.currentTimeMillis()
+        )
+        profileDao.insertProfile(resetProfile)
     }
 
 }

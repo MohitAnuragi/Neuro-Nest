@@ -11,8 +11,9 @@ import com.google.gson.reflect.TypeToken
 data class UserProfile(
     @PrimaryKey val userId: String = "default_user",
     val username: String = "Puzzle Master",
-    val displayName: String = "", // NEW: For user's chosen name
-    val profileImageUri: String = "", // NEW: For storing image URI
+    val displayName: String = "", // User's chosen name
+    val profileImageUri: String = "", // Stored image URI
+    val isProfileSetup: Boolean = false, // Explicit flag for profile setup completion
     val joinDate: Long = System.currentTimeMillis(),
     val totalScore: Long = 0,
     val totalPuzzlesSolved: Int = 0,
@@ -22,8 +23,6 @@ data class UserProfile(
     val lastPlayedDate: Long = 0,
     val puzzleStats: String = "{}" // JSON string of Map<String, PuzzleTypeStats>
 ) {
-    // Helper property to check if profile is fully set up
-    val isProfileSetup: Boolean get() = displayName.isNotBlank()
 
     fun getPuzzleStatsMap(): Map<String, PuzzleTypeStats> {
         return try {

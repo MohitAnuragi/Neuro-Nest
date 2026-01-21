@@ -46,6 +46,11 @@ interface ProfileRepository {
     suspend fun getLevelDetails(puzzleType: String, levelNumber: Int): LevelDetails?
     suspend fun resetLevelProgress(puzzleType: String)
     suspend fun getOrCreateProfile(): UserProfile
+
+    // NEW: Profile persistence APIs
+    suspend fun updateProfileDetails(displayName: String, imageUri: String)
+    suspend fun isProfileSetupComplete(): Boolean
+    suspend fun resetProfile()
 }
 
 // NEW: Data classes for level system

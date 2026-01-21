@@ -9,7 +9,7 @@ import com.example.neuronest.puzzlelevels.LevelProgressEntity
 
 @Database(
     entities = [UserProfile::class, LevelProgressEntity::class], 
-    version = 4, 
+    version = 5,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

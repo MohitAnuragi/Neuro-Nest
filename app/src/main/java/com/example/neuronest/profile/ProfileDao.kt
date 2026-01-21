@@ -38,6 +38,6 @@ interface ProfileDao {
     @Query("UPDATE user_profiles SET profileImageUri = :imageUri WHERE userId = :userId")
     suspend fun updateProfileImage(userId: String, imageUri: String)
 
-    @Query("UPDATE user_profiles SET displayName = :displayName, profileImageUri = :imageUri WHERE userId = :userId")
-    suspend fun updateProfileDetails(userId: String, displayName: String, imageUri: String)
+    @Query("UPDATE user_profiles SET displayName = :displayName, profileImageUri = :imageUri, isProfileSetup = :isSetup WHERE userId = :userId")
+    suspend fun updateProfileDetails(userId: String, displayName: String, imageUri: String, isSetup: Boolean)
 }

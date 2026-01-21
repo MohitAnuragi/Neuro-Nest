@@ -30,24 +30,28 @@ class ProfileViewModel @Inject constructor(
     private val _achievements = MutableStateFlow<List<Achievement>>(emptyList())
     val achievements: StateFlow<List<Achievement>> = _achievements.asStateFlow()
 
-
-    private val _needsProfileSetup = MutableStateFlow(true)
-    val needsProfileSetup: StateFlow<Boolean> = _needsProfileSetup.asStateFlow()
+    // Track profile setup status: null = loading, true = needs setup, false = setup complete
+    private val _needsProfileSetup = MutableStateFlow<Boolean?>(null)
+    val needsProfileSetup: StateFlow<Boolean?> = _needsProfileSetup.asStateFlow()
 
     init {
-        checkProfileSetup()
-        loadProfile()
-        loadAchievements()
+        // Load profile from Room and check setup status
+        viewModelScope.launch {
+            loadProfile()
+            checkProfileSetup()
+            loadAchievements()
+        }
     }
 
     private fun checkProfileSetup() {
         viewModelScope.launch {
-            // Check DataStore for saved profile data
-            val userPreferences = com.example.neuronest.data.UserPreferences(context)
-            val userName = userPreferences.userName.first()
-
-            // If user has saved their name, profile is set up
-            _needsProfileSetup.value = userName.isNullOrEmpty()
+            try {
+                val isSetup = profileRepository.isProfileSetupComplete()
+                _needsProfileSetup.value = !isSetup
+            } catch (e: Exception) {
+                // In case of error, default to showing setup screen
+                _needsProfileSetup.value = true
+            }
         }
     }
     // In ProfileViewModel.kt
@@ -65,11 +69,10 @@ class ProfileViewModel @Inject constructor(
     }
     private fun loadProfile() {
         viewModelScope.launch {
-//            _profile.value = profileRepository.getOrCreateProfile()
             val userProfile = profileRepository.getOrCreateProfile()
             _profile.value = userProfile
+            // Update needsProfileSetup based on the explicit isProfileSetup flag
             _needsProfileSetup.value = !userProfile.isProfileSetup
-//            _puzzleStats.value = profileRepository.getAllStats()
         }
     }
 
@@ -80,24 +83,25 @@ class ProfileViewModel @Inject constructor(
     }
 
     fun refresh() {
-        loadProfile()
-        loadAchievements()
-        checkProfileSetup()
-
+        viewModelScope.launch {
+            loadProfile()
+            checkProfileSetup()
+            loadAchievements()
+        }
     }
 
     fun resetProfile() {
         viewModelScope.launch {
-//            profileRepository.resetProfile()
+            profileRepository.resetProfile()
             loadProfile()
-            loadAchievements()
             checkProfileSetup()
+            loadAchievements()
         }
     }
     // NEW: Methods for updating profile details
     fun updateDisplayName(displayName: String) {
         viewModelScope.launch {
-//            profileRepository.updateDisplayName(displayName)
+            profileRepository.updateProfileDetails(displayName, _profile.value?.profileImageUri ?: "")
             loadProfile()
             checkProfileSetup()
         }
@@ -105,20 +109,20 @@ class ProfileViewModel @Inject constructor(
 
     fun updateProfileImage(imageUri: String) {
         viewModelScope.launch {
-//            profileRepository.updateProfileImage(imageUri)
+            profileRepository.updateProfileDetails(_profile.value?.displayName ?: "", imageUri)
             loadProfile()
         }
     }
 
     fun updateProfileDetails(displayName: String, imageUri: String) {
         viewModelScope.launch {
-            // Save to Room database
-            val repository = profileRepository as ProfileRepositoryImpl
-            repository.updateProfileDetails(displayName, imageUri)
+            // Save to Room database via repository
+            profileRepository.updateProfileDetails(displayName, imageUri)
 
-            // Refresh profile and check setup status
+            // Refresh profile state to reflect changes immediately
             loadProfile()
             checkProfileSetup()
+            loadAchievements()
         }
     }
     private fun calculateAchievements(

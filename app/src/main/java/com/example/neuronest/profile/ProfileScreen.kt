@@ -29,10 +29,13 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.rememberAsyncImagePainter
+import coil.request.ImageRequest
 import com.example.neuronest.R
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -216,14 +219,18 @@ fun ProfileHeader(profile: UserProfile?, isContentLoaded: Boolean) {
                         .clip(CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
-                    if (!profile?.profileImageUri.isNullOrEmpty() && profile?.profileImageUri != "null") {
-                        // Use Coil's AsyncImage for better image loading
+                    val imageUri = profile?.profileImageUri
+                    if (!imageUri.isNullOrEmpty() && imageUri != "null" && imageUri.isNotBlank()) {
+                        // Use Coil to load image from URI
                         Image(
                             painter = rememberAsyncImagePainter(
-                                model = Uri.parse(profile?.profileImageUri)
+                                model = imageUri,
+                                error = painterResource(id = R.drawable.ic_launcher_foreground)
                             ),
                             contentDescription = "Profile Image",
-                            modifier = Modifier.fillMaxSize(),
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clip(CircleShape),
                             contentScale = ContentScale.Crop
                         )
                     } else {
