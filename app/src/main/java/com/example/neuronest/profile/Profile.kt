@@ -61,3 +61,15 @@ data class Achievement(
     val target: Int = 0,
     val puzzleType: String? = null
 )
+
+/**
+ * Puzzle Progress Data for Profile Screen
+ *
+ * Contains aggregate progress for a single puzzle type
+ * Data comes directly from Room database
+ */
+data class PuzzleProgressData(
+    val puzzleType: String,
+    val solvedCount: Int,
+    val totalCount: Int
+)

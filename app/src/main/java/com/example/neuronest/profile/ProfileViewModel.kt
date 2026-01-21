@@ -5,41 +5,54 @@ import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.neuronest.puzzlelevels.LevelRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+/**
+ * Profile ViewModel
+ *
+ * Manages PROFILE data ONLY (identity + current state).
+ * Does NOT manage achievements - that's in AchievementsViewModel.
+ */
 @HiltViewModel
 class ProfileViewModel @Inject constructor(
     private val profileRepository: ProfileRepository,
+    private val levelRepository: LevelRepository,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
-
 
     private val _profile = MutableStateFlow<UserProfile?>(null)
     val profile: StateFlow<UserProfile?> = _profile.asStateFlow()
 
-    private val _puzzleStats = MutableStateFlow<Map<String, PuzzleTypeStats>>(emptyMap())
-    val puzzleStats: StateFlow<Map<String, PuzzleTypeStats>> = _puzzleStats.asStateFlow()
-
-    private val _achievements = MutableStateFlow<List<Achievement>>(emptyList())
-    val achievements: StateFlow<List<Achievement>> = _achievements.asStateFlow()
+    private val _puzzleProgress = MutableStateFlow<List<PuzzleProgressData>>(emptyList())
+    val puzzleProgress: StateFlow<List<PuzzleProgressData>> = _puzzleProgress.asStateFlow()
 
     // Track profile setup status: null = loading, true = needs setup, false = setup complete
     private val _needsProfileSetup = MutableStateFlow<Boolean?>(null)
     val needsProfileSetup: StateFlow<Boolean?> = _needsProfileSetup.asStateFlow()
+
+    // Define the puzzle types in the app - MUST MATCH EXACTLY with navigation system
+    private val puzzleTypes = listOf(
+        "WordScramble",
+        "Kakuro",
+        "SequenceGenerator",
+        "SudokuPuzzle",
+        "LogicPuzzles",
+        "Connections"
+    )
 
     init {
         // Load profile from Room and check setup status
         viewModelScope.launch {
             loadProfile()
             checkProfileSetup()
-            loadAchievements()
+            loadPuzzleProgress()
         }
     }
 
@@ -54,19 +67,7 @@ class ProfileViewModel @Inject constructor(
             }
         }
     }
-    // In ProfileViewModel.kt
-    fun getProfileImageUri(): Uri? {
-        val profile = _profile.value
-        return if (!profile?.profileImageUri.isNullOrEmpty()) {
-            try {
-                Uri.parse(profile?.profileImageUri)
-            } catch (e: Exception) {
-                null
-            }
-        } else {
-            null
-        }
-    }
+
     private fun loadProfile() {
         viewModelScope.launch {
             val userProfile = profileRepository.getOrCreateProfile()
@@ -76,9 +77,37 @@ class ProfileViewModel @Inject constructor(
         }
     }
 
-    private fun loadAchievements() {
+    /**
+     * Load puzzle progress from Room database
+     * Aggregates completed levels per puzzle type
+     *
+     * For PROFILE: Shows solvedCount / 500 (per puzzle type)
+     * This is DIFFERENT from achievements which use GLOBAL total
+     */
+    private fun loadPuzzleProgress() {
         viewModelScope.launch {
-            _achievements.value = calculateAchievements(_profile.value, _puzzleStats.value)
+            val progressList = puzzleTypes.mapNotNull { puzzleType ->
+                try {
+                    val completedCount = levelRepository.getCompletedLevelsCount(puzzleType)
+
+                    // For PROFILE: Total is always 500 levels per puzzle type
+                    val totalCount = 500
+
+                    // Only include puzzle types that have been played
+                    if (completedCount > 0) {
+                        PuzzleProgressData(
+                            puzzleType = puzzleType,
+                            solvedCount = completedCount,
+                            totalCount = totalCount
+                        )
+                    } else {
+                        null
+                    }
+                } catch (e: Exception) {
+                    null
+                }
+            }
+            _puzzleProgress.value = progressList
         }
     }
 
@@ -86,7 +115,7 @@ class ProfileViewModel @Inject constructor(
         viewModelScope.launch {
             loadProfile()
             checkProfileSetup()
-            loadAchievements()
+            loadPuzzleProgress()
         }
     }
 
@@ -95,10 +124,10 @@ class ProfileViewModel @Inject constructor(
             profileRepository.resetProfile()
             loadProfile()
             checkProfileSetup()
-            loadAchievements()
         }
     }
-    // NEW: Methods for updating profile details
+
+    // Methods for updating profile details
     fun updateDisplayName(displayName: String) {
         viewModelScope.launch {
             profileRepository.updateProfileDetails(displayName, _profile.value?.profileImageUri ?: "")
@@ -122,47 +151,6 @@ class ProfileViewModel @Inject constructor(
             // Refresh profile state to reflect changes immediately
             loadProfile()
             checkProfileSetup()
-            loadAchievements()
         }
-    }
-    private fun calculateAchievements(
-        profile: UserProfile?,
-        stats: Map<String, PuzzleTypeStats>
-    ): List<Achievement> {
-        val achievements = mutableListOf<Achievement>()
-
-        // Total puzzles solved achievements
-        val totalSolved = profile?.totalPuzzlesSolved ?: 0
-        achievements.addAll(listOf(
-            Achievement("first_blood", "First Blood", "Solve your first puzzle",
-                unlocked = totalSolved >= 1, progress = totalSolved, target = 1),
-            Achievement("puzzle_master", "Puzzle Master", "Solve 50 puzzles",
-                unlocked = totalSolved >= 50, progress = totalSolved, target = 50),
-            Achievement("puzzle_grandmaster", "Puzzle Grandmaster", "Solve 200 puzzles",
-                unlocked = totalSolved >= 200, progress = totalSolved, target = 200)
-        ))
-
-        // Puzzle type specific achievements
-        stats.forEach { (type, typeStats) ->
-            achievements.addAll(listOf(
-                Achievement("${type}_novice", "$type Novice", "Solve 10 $type puzzles",
-                    unlocked = typeStats.solved >= 10, progress = typeStats.solved, target = 10,
-                    puzzleType = type),
-                Achievement("${type}_expert", "$type Expert", "Solve 50 $type puzzles",
-                    unlocked = typeStats.solved >= 50, progress = typeStats.solved, target = 50,
-                    puzzleType = type)
-            ))
-        }
-
-        // Streak achievements
-        val streak = profile?.currentStreak ?: 0
-        achievements.addAll(listOf(
-            Achievement("streak_3", "3-Day Streak", "Play for 3 consecutive days",
-                unlocked = streak >= 3, progress = streak, target = 3),
-            Achievement("streak_7", "7-Day Streak", "Play for 7 consecutive days",
-                unlocked = streak >= 7, progress = streak, target = 7)
-        ))
-
-        return achievements
     }
 }

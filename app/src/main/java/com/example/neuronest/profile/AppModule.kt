@@ -1,6 +1,8 @@
 package com.example.neuronest.profile
 
 import android.content.Context
+import com.example.neuronest.achievements.AchievementDao
+import com.example.neuronest.achievements.AchievementRepository
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -34,5 +36,20 @@ object AppModule {
     @Singleton
     fun provideLevelProgressDao(database: AppDatabase): LevelProgressDao {
         return database.levelProgressDao()
+    }
+
+    @Provides
+    @Singleton
+    fun provideAchievementDao(database: AppDatabase): AchievementDao {
+        return database.achievementDao()
+    }
+
+    @Provides
+    @Singleton
+    fun provideAchievementRepository(
+        achievementDao: AchievementDao,
+        levelProgressDao: LevelProgressDao
+    ): AchievementRepository {
+        return AchievementRepository(achievementDao, levelProgressDao)
     }
 }
