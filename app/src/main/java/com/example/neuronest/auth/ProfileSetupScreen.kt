@@ -37,12 +37,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.rememberAsyncImagePainter
-import coil.request.ImageRequest
 import com.example.neuronest.R
 import com.example.neuronest.profile.ProfileViewModel
 import com.example.neuronest.profile.UserProfile
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -51,8 +49,8 @@ fun ProfileSetupScreen(
     viewModel: ProfileViewModel = hiltViewModel(),
     onProfileSetupComplete: () -> Unit
 ) {
-    val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
+    val soundManager: ProfileViewModel = hiltViewModel<ProfileViewModel>()
 
     val profile by viewModel.profile.collectAsState()
     var displayName by remember { mutableStateOf("") }
@@ -60,21 +58,17 @@ fun ProfileSetupScreen(
     var showImagePicker by remember { mutableStateOf(false) }
     var isContentLoaded by remember { mutableStateOf(false) }
 
-    // Load profile data when screen opens
     LaunchedEffect(Unit) {
         delay(300)
         isContentLoaded = true
     }
 
-    // Update UI when profile data loads from database
     LaunchedEffect(profile) {
         profile?.let { userProfile ->
-            // Load display name
             if (userProfile.displayName.isNotBlank() && userProfile.displayName != "Guest User") {
                 displayName = userProfile.displayName
             }
 
-            // Load profile image URI
             if (userProfile.profileImageUri.isNotEmpty() && userProfile.profileImageUri != "null") {
                 try {
                     selectedImageUri = Uri.parse(userProfile.profileImageUri)
@@ -132,27 +126,22 @@ fun ProfileSetupScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(24.dp)
             ) {
-                // Profile Image Picker
                 ProfileImageSection(
                     selectedImageUri = selectedImageUri,
                     isContentLoaded = isContentLoaded,
                     onImageClick = { showImagePicker = true }
                 )
 
-                // Name Input
                 NameInputSection(
                     displayName = displayName,
                     isContentLoaded = isContentLoaded,
                     onNameChange = { displayName = it }
                 )
-
-                // Action Buttons
                 ActionButtonsSection(
                     profile = profile,
                     displayName = displayName,
                     isContentLoaded = isContentLoaded,
                     onSave = {
-                        // Save to Room database via ViewModel
                         viewModel.updateProfileDetails(
                             displayName,
                             selectedImageUri?.toString() ?: ""
@@ -160,7 +149,6 @@ fun ProfileSetupScreen(
                         onProfileSetupComplete()
                     },
                     onSkip = {
-                        // Mark as setup complete even when skipping
                         viewModel.updateProfileDetails("Guest User", "")
                         onProfileSetupComplete()
                     }
@@ -168,21 +156,17 @@ fun ProfileSetupScreen(
             }
         }
 
-        // Image Picker Dialog
         if (showImagePicker) {
             val imagePickerLauncher = rememberLauncherForActivityResult(
                 contract = ActivityResultContracts.PickVisualMedia(),
                 onResult = { uri: Uri? ->
                     if (uri != null) {
                         try {
-                            // Take persistent permission for the URI
                             val flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
                             context.contentResolver.takePersistableUriPermission(uri, flags)
                         } catch (e: Exception) {
-                            // Some content providers don't support persistent permissions
-                            // but we can still use the URI
+                            e.printStackTrace()
                         }
-                        // Update local state to show image immediately
                         selectedImageUri = uri
                     }
                     showImagePicker = false
@@ -427,7 +411,6 @@ fun ActionButtonsSection(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Save Button
         Button(
             onClick = onSave,
             enabled = displayName.isNotBlank(),
@@ -450,7 +433,6 @@ fun ActionButtonsSection(
             )
         }
 
-        // Skip button for first-time setup
         if (profile?.isProfileSetup != true) {
             Text(
                 text = "Skip for now",

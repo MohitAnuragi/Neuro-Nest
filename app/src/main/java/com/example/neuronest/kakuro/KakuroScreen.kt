@@ -53,14 +53,13 @@ fun KakuroScreen(
     val dataStoreManager = remember { LevelDataStoreManager(context) }
     val coroutineScope = rememberCoroutineScope()
 
-    // Tutorial state
-    val isTutorialCompleted by dataStoreManager.isTutorialCompletedFlow("Kakuro").collectAsState(initial = true)
+    val isTutorialCompleted by dataStoreManager.isTutorialCompletedFlow("Kakuro")
+        .collectAsState(initial = true)
     var showTutorial by remember { mutableStateOf(false) }
 
-    // Show tutorial only on first launch and level 1
     LaunchedEffect(level, isTutorialCompleted) {
         if (level == 1 && !isTutorialCompleted) {
-            delay(500) // Brief delay before showing tutorial
+            delay(500)
             showTutorial = true
         }
     }
@@ -108,13 +107,6 @@ fun KakuroScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { viewModel.showHint() }) {
-                        Icon(
-                            imageVector = Icons.Default.Lightbulb,
-                            contentDescription = "Hint",
-                            tint = Color(0xFFFFD700)
-                        )
-                    }
                     PuzzleTimer(
                         isRunning = isTimerRunning,
                         onTimeUpdate = { timeMs ->
@@ -185,7 +177,6 @@ fun KakuroScreen(
 
                 Spacer(modifier = Modifier.weight(1f))
 
-                // Action buttons
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -193,7 +184,7 @@ fun KakuroScreen(
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     OutlinedButton(
-                        onClick = { viewModel.skipPuzzle() },
+                        onClick = { viewModel.showHint() },
                         modifier = Modifier
                             .weight(1f)
                             .height(56.dp),
@@ -202,7 +193,7 @@ fun KakuroScreen(
                         ),
                         shape = RoundedCornerShape(12.dp)
                     ) {
-                        Text("SKIP", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        Text("HINT", fontWeight = FontWeight.Bold, fontSize = 16.sp)
                     }
 
                     Button(
@@ -253,7 +244,6 @@ fun KakuroScreen(
         )
     }
 
-    // Tutorial overlay
     if (showTutorial) {
         HowToPlayKakuroOverlay(
             onDismiss = {
@@ -319,6 +309,7 @@ fun KakuroGrid(
                             is KakuroCell.ClueCell -> {
                                 KakuroClueCell(cell)
                             }
+
                             is KakuroCell.PlayCell -> {
                                 KakuroPlayCell(
                                     cell = cell,
@@ -355,7 +346,6 @@ fun KakuroClueCell(cell: KakuroCell.ClueCell) {
             )
         }
 
-        // Down sum (top-right)
         if (cell.downSum > 0) {
             Text(
                 text = cell.downSum.toString(),
@@ -368,7 +358,6 @@ fun KakuroClueCell(cell: KakuroCell.ClueCell) {
             )
         }
 
-        // Across sum (bottom-left)
         if (cell.acrossSum > 0) {
             Text(
                 text = cell.acrossSum.toString(),
@@ -417,7 +406,9 @@ fun KakuroPlayCell(
         BasicTextField(
             value = textValue,
             onValueChange = { newValue ->
-                if (newValue.isEmpty() || (newValue.length == 1 && newValue.toIntOrNull()?.let { it in 1..9 } == true)) {
+                if (newValue.isEmpty() || (newValue.length == 1 && newValue.toIntOrNull()
+                        ?.let { it in 1..9 } == true)
+                ) {
                     textValue = newValue
                     onValueChange(newValue)
                 }

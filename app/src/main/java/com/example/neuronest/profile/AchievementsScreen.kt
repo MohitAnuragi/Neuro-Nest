@@ -31,12 +31,7 @@ import com.example.neuronest.R
 import com.example.neuronest.achievements.AchievementEntity
 import kotlinx.coroutines.delay
 
-/**
- * Achievements Screen - Displays earned milestones
- *
- * Shows ONLY what the user has earned (achievements), NOT their current state (profile).
- * All data comes from Room database and is automatically unlocked based on real progress.
- */
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AchievementsScreen(
@@ -86,7 +81,6 @@ fun AchievementsScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            // Wood textured background
             Image(
                 painter = painterResource(id = R.drawable.wood_texture),
                 contentDescription = "Wood background",
@@ -101,7 +95,6 @@ fun AchievementsScreen(
                     .padding(16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Achievement stats summary
                 AchievementsSummary(
                     unlockedCount = unlockedCount,
                     totalCount = totalCount,
@@ -110,7 +103,6 @@ fun AchievementsScreen(
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // Achievements list
                 AchievementsSection(
                     achievements = achievements,
                     isContentLoaded = isContentLoaded

@@ -3,26 +3,17 @@ package com.example.neuronest.achievements
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
-/**
- * Achievement Entity - Stores unlocked achievements in Room database
- *
- * Achievements are milestone-based and automatically unlocked when conditions are met.
- * They represent what the user has EARNED, not their current state.
- */
 @Entity(tableName = "achievements")
 data class AchievementEntity(
     @PrimaryKey val achievementId: String,
     val title: String,
     val description: String,
     val isUnlocked: Boolean = false,
-    val unlockedAt: Long? = null, // Timestamp when achievement was unlocked
-    val progress: Int = 0, // Current progress toward unlocking
-    val target: Int = 1 // Target value to unlock
+    val unlockedAt: Long? = null,
+    val progress: Int = 0,
+    val target: Int = 1
 )
 
-/**
- * Achievement Type Enum - Defines all possible achievements
- */
 enum class AchievementType(
     val id: String,
     val title: String,
@@ -63,7 +54,7 @@ enum class AchievementType(
         id = "neuronest_champion",
         title = "NeuroNest Champion 🏆",
         description = "Solve 500 puzzles AND maintain 30-day streak",
-        target = 1 // Special compound achievement
+        target = 1
     );
 
     fun toEntity(): AchievementEntity {

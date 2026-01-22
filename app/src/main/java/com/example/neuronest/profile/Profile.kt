@@ -1,4 +1,3 @@
-// data/Profile.kt
 package com.example.neuronest.profile
 
 import androidx.room.Entity
@@ -11,9 +10,9 @@ import com.google.gson.reflect.TypeToken
 data class UserProfile(
     @PrimaryKey val userId: String = "default_user",
     val username: String = "Puzzle Master",
-    val displayName: String = "", // User's chosen name
-    val profileImageUri: String = "", // Stored image URI
-    val isProfileSetup: Boolean = false, // Explicit flag for profile setup completion
+    val displayName: String = "",
+    val profileImageUri: String = "",
+    val isProfileSetup: Boolean = false,
     val joinDate: Long = System.currentTimeMillis(),
     val totalScore: Long = 0,
     val totalPuzzlesSolved: Int = 0,
@@ -21,7 +20,7 @@ data class UserProfile(
     val averageAccuracy: Double = 0.0,
     val currentStreak: Int = 0,
     val lastPlayedDate: Long = 0,
-    val puzzleStats: String = "{}" // JSON string of Map<String, PuzzleTypeStats>
+    val puzzleStats: String = "{}"
 ) {
 
     fun getPuzzleStatsMap(): Map<String, PuzzleTypeStats> {
@@ -50,24 +49,7 @@ data class PuzzleTypeStats(
     val averageTimeMs: Long get() = if (solved > 0) totalTimeMs / solved else 0
 }
 
-data class Achievement(
-    val id: String,
-    val title: String,
-    val description: String,
-    val iconResId: Int? = null,
-    val unlocked: Boolean = false,
-    val unlockDate: Long? = null,
-    val progress: Int = 0,
-    val target: Int = 0,
-    val puzzleType: String? = null
-)
 
-/**
- * Puzzle Progress Data for Profile Screen
- *
- * Contains aggregate progress for a single puzzle type
- * Data comes directly from Room database
- */
 data class PuzzleProgressData(
     val puzzleType: String,
     val solvedCount: Int,

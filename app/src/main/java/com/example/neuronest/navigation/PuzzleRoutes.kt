@@ -3,7 +3,6 @@ package com.example.neuronest.navigation
 import com.example.neuronest.backgroundMusic.BackgroundMusicPlayer
 import androidx.annotation.DrawableRes
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -37,7 +36,7 @@ fun PuzzleNavigation() {
     val needsSetupNullable by profileViewModel.needsProfileSetup.collectAsState()
 
     BackgroundMusicPlayer(
-        audioResId = R.raw.neuroback,
+        audioResId = R.raw.neuro_bg_music,
         isMusicPlaying = isMusicPlaying
     )
 
@@ -47,9 +46,7 @@ fun PuzzleNavigation() {
     ) {
         composable(PuzzleRoutes.splash.route) {
             SplashScreen {
-                // Only navigate after profile check is complete (needsSetupNullable != null)
                 if (needsSetupNullable == null) {
-                    // Still loading - do nothing and let Splash remain visible until repository finishes
                 } else {
                     if (needsSetupNullable == true) {
                         navController.navigate(PuzzleRoutes.ProfileSetup.route) {
@@ -245,12 +242,14 @@ fun PuzzleNavigation() {
 
         composable(PuzzleRoutes.Profile.route) {
             ProfileScreen(
+                onBack = { navController.popBackStack() },
                 onSignOut = {
                     profileViewModel.resetProfile()
                     navController.navigate(PuzzleRoutes.splash.route) {
                         popUpTo(PuzzleRoutes.splash.route) { inclusive = true }
                     }
                 }
+
             )
         }
 
@@ -260,7 +259,8 @@ fun PuzzleNavigation() {
             )
         }
 
-        composable("${PuzzleRoutes.Connection.route}/{level}",
+        composable(
+            "${PuzzleRoutes.Connection.route}/{level}",
             arguments = listOf(navArgument("level") { type = NavType.IntType })
         ) { backStackEntry ->
             val level = backStackEntry.arguments?.getInt("level") ?: 1

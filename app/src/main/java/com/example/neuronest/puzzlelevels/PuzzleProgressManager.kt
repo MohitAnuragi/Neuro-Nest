@@ -3,7 +3,6 @@ package com.example.neuronest.puzzlelevels
 
 
 
-// LevelManager.kt
 object LevelManager {
     private const val PREFS_NAME = "puzzle_levels"
     private const val KEY_SUDOKU_LEVEL = "sudoku_level"

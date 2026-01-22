@@ -37,10 +37,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-/**
- * Extension function to format timestamp to user-friendly date
- * Format: "Joined: Aug 2025"
- */
+
 private fun Long.toFormattedJoinDate(): String {
     return try {
         val sdf = SimpleDateFormat("MMM yyyy", Locale.getDefault())
@@ -50,17 +47,6 @@ private fun Long.toFormattedJoinDate(): String {
     }
 }
 
-/**
- * Main Profile Screen
- *
- * Displays:
- * - Profile image (circular)
- * - Display name
- * - Join date
- * - Puzzle progress overview (per puzzle type)
- *
- * All data loaded from Room database via ViewModel
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
@@ -69,11 +55,9 @@ fun ProfileScreen(
     onSignOut: () -> Unit = {},
     onEditProfile: () -> Unit = {}
 ) {
-    // Observe profile data from ViewModel
     val profile by viewModel.profile.collectAsState()
     val puzzleProgress by viewModel.puzzleProgress.collectAsState()
 
-    // Animation state
     var isContentLoaded by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
@@ -102,13 +86,6 @@ fun ProfileScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = onEditProfile) {
-                        Icon(
-                            imageVector = Icons.Default.Edit,
-                            contentDescription = "Edit Profile",
-                            tint = Color.White
-                        )
-                    }
                     IconButton(onClick = onSignOut) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ExitToApp,
@@ -145,13 +122,11 @@ fun ProfileScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Profile Header (image, name, join date)
                 ProfileHeader(
                     profile = profile,
                     isContentLoaded = isContentLoaded
                 )
 
-                // Puzzle Progress Section
                 PuzzleProgressSection(
                     puzzleProgress = puzzleProgress,
                     isContentLoaded = isContentLoaded
@@ -161,14 +136,7 @@ fun ProfileScreen(
     }
 }
 
-/**
- * Profile Header Component
- *
- * Displays:
- * - Circular profile image (or placeholder)
- * - Display name (bold, centered)
- * - Join date (formatted)
- */
+
 @Composable
 fun ProfileHeader(
     profile: UserProfile?,
@@ -208,7 +176,6 @@ fun ProfileHeader(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Profile Image - Circular with golden border
                 Box(
                     modifier = Modifier
                         .size(120.dp)
@@ -238,7 +205,6 @@ fun ProfileHeader(
                             contentScale = ContentScale.Crop
                         )
                     } else {
-                        // Placeholder icon when no image
                         Icon(
                             imageVector = Icons.Default.Person,
                             contentDescription = "Default Profile",
@@ -248,7 +214,7 @@ fun ProfileHeader(
                     }
                 }
 
-                // Display Name
+
                 Text(
                     text = if (!profile?.displayName.isNullOrBlank() && profile?.displayName != "Guest User") {
                         profile.displayName
@@ -261,7 +227,7 @@ fun ProfileHeader(
                     )
                 )
 
-                // Join Date
+
                 Text(
                     text = profile?.joinDate?.toFormattedJoinDate() ?: "—",
                     style = MaterialTheme.typography.bodyMedium.copy(
@@ -273,18 +239,12 @@ fun ProfileHeader(
     }
 }
 
-/**
- * Puzzle Progress Section
- *
- * Displays progress for each puzzle type from the database
- */
 @Composable
 fun PuzzleProgressSection(
     puzzleProgress: List<PuzzleProgressData>,
     isContentLoaded: Boolean
 ) {
     if (puzzleProgress.isEmpty()) {
-        // Empty state - no progress yet
         Card(
             modifier = Modifier
                 .fillMaxWidth()
@@ -373,14 +333,6 @@ fun PuzzleProgressSection(
     }
 }
 
-/**
- * Individual Puzzle Progress Item
- *
- * Shows:
- * - Puzzle type name
- * - Solved / Total count
- * - Progress bar
- */
 @Composable
 fun PuzzleProgressItem(
     puzzleProgress: PuzzleProgressData,
@@ -403,7 +355,6 @@ fun PuzzleProgressItem(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        // Puzzle name and count
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -426,7 +377,6 @@ fun PuzzleProgressItem(
             )
         }
 
-        // Progress bar
         Box(
             modifier = Modifier
                 .fillMaxWidth()

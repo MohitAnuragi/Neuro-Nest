@@ -208,7 +208,7 @@ fun SequenceGeneratorScreen(
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     OutlinedButton(
-                        onClick = { viewModel.skipProblem() },
+                        onClick = { viewModel.showHint() },
                         modifier = Modifier
                             .weight(1f)
                             .height(56.dp),
@@ -216,7 +216,7 @@ fun SequenceGeneratorScreen(
                             contentColor = Color(0xFFD4AF37)
                         )
                     ) {
-                        Text("SKIP", fontWeight = FontWeight.Bold)
+                        Text("HINT", fontWeight = FontWeight.Bold)
                     }
 
                     Button(
@@ -232,17 +232,6 @@ fun SequenceGeneratorScreen(
                     ) {
                         Text("SUBMIT", fontWeight = FontWeight.Bold, fontSize = 16.sp)
                     }
-                }
-                Button(
-                    onClick = { viewModel.showHint() },
-                    modifier = Modifier
-                        .width(200.dp)
-                        .height(100.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = Color(0xFF000000)
-                    )
-                ) {
-                    Text("HINT", fontWeight = FontWeight.Bold, fontSize = 16.sp)
                 }
             }
         }

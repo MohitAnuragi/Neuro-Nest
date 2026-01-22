@@ -1,18 +1,8 @@
-// repository/ProfileRepository.kt
 package com.example.neuronest.profile
 
-import android.content.Context
-import androidx.datastore.preferences.core.stringPreferencesKey
-import androidx.datastore.preferences.preferencesDataStore
-import androidx.room.Entity
-import androidx.room.PrimaryKey
-import java.util.Calendar
-import javax.inject.Inject
-import javax.inject.Singleton
 
 
 interface ProfileRepository {
-    // Existing functions
     suspend fun updatePuzzleResult(
         puzzleType: String,
         difficulty: String,
@@ -32,7 +22,6 @@ interface ProfileRepository {
     suspend fun getPuzzleAccuracy(puzzleType: String): Double
     suspend fun getTotalAttempts(puzzleType: String): Int
 
-    // NEW: Level system functions
     suspend fun updateLevelProgress(
         puzzleType: String,
         levelNumber: Int,
@@ -47,13 +36,11 @@ interface ProfileRepository {
     suspend fun resetLevelProgress(puzzleType: String)
     suspend fun getOrCreateProfile(): UserProfile
 
-    // NEW: Profile persistence APIs
     suspend fun updateProfileDetails(displayName: String, imageUri: String)
     suspend fun isProfileSetupComplete(): Boolean
     suspend fun resetProfile()
 }
 
-// NEW: Data classes for level system
 data class LevelProgress(
     val puzzleType: String,
     val currentLevel: Int,
@@ -62,18 +49,6 @@ data class LevelProgress(
     val levelsCompleted: Int,
     val isMaxLevelReached: Boolean
 )
-//@Entity(tableName = "puzzle_results")
-//data class PuzzleResultEntity(
-//    @PrimaryKey(autoGenerate = true) val id: Long = 0,
-//    val puzzleType: String,
-//    val difficulty: String,
-//    val wasSolved: Boolean,
-//    val timeTakenMs: Long,
-//    val hintsUsed: Int,
-//    val scoreEarned: Long,
-//    val timestamp: Long
-//)
-
 
 data class LevelDetails(
     val levelNumber: Int,

@@ -12,9 +12,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/**
- * Centralized Sound Manager for all game sound effects
- */
+
 @Singleton
 class SoundManager @Inject constructor(
     @ApplicationContext private val context: Context
@@ -47,15 +45,14 @@ class SoundManager @Inject constructor(
 
     private fun loadAllSounds() {
         soundPool?.let { pool ->
-            // Load all sound effects
             soundIds[SoundType.CORRECT_MOVE] = pool.load(context, R.raw.move, 1)
-            soundIds[SoundType.INCORRECT_MOVE] = pool.load(context, R.raw.ohno, 1)
+            soundIds[SoundType.INCORRECT_MOVE] = pool.load(context, R.raw.incorrect_move, 1)
             soundIds[SoundType.LEVEL_COMPLETE] = pool.load(context, R.raw.levelcompleted, 1)
             soundIds[SoundType.BUTTON_CLICK] = pool.load(context, R.raw.buttonclicked, 1)
-            soundIds[SoundType.UNLOCK] = pool.load(context, R.raw.unlock, 1)
-            soundIds[SoundType.LOCK] = pool.load(context, R.raw.unlock, 1)
+            soundIds[SoundType.UNLOCK] = pool.load(context, R.raw.unlock_level, 1)
+            soundIds[SoundType.LOCK] = pool.load(context, R.raw.lock, 1)
             soundIds[SoundType.TRANSITION] = pool.load(context, R.raw.transition, 1)
-            soundIds[SoundType.HINT] = pool.load(context, R.raw.hint, 1)
+            soundIds[SoundType.HINT] = pool.load(context, R.raw.hint_sound, 1)
             soundIds[SoundType.STAR_EARNED] = pool.load(context, R.raw.star, 1)
         }
     }

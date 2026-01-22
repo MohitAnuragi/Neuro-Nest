@@ -61,11 +61,9 @@ fun ConnectionPuzzleScreen(
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
 
-    // Tutorial state
     var showTutorial by remember { mutableStateOf(false) }
     var tutorialCheckDone by remember { mutableStateOf(false) }
 
-    // Check if tutorial was already shown
     LaunchedEffect(Unit) {
         val tutorialCompleted = context.connectionTutorialDataStore.data.map { prefs ->
             prefs[TUTORIAL_COMPLETED_KEY] ?: false
@@ -122,13 +120,6 @@ fun ConnectionPuzzleScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { viewModel.showHint() }) {
-                        Icon(
-                            imageVector = Icons.Default.Lightbulb,
-                            contentDescription = "Hint",
-                            tint = Color(0xFFFFD700)
-                        )
-                    }
                     PuzzleTimer(
                         isRunning = isTimerRunning,
                         onTimeUpdate = { timeMs ->
@@ -184,12 +175,10 @@ fun ConnectionPuzzleScreen(
                     )
                 }
 
-                // Solved Categories
                 solvedCategories.forEach { category ->
                     SolvedCategoryDisplay(category = category)
                 }
 
-                // Available Words Grid
                 if (availableWords.isNotEmpty()) {
                     LazyVerticalGrid(
                         columns = GridCells.Fixed(4),
@@ -211,7 +200,6 @@ fun ConnectionPuzzleScreen(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // Action buttons
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -231,7 +219,7 @@ fun ConnectionPuzzleScreen(
                     }
 
                     OutlinedButton(
-                        onClick = { viewModel.skipPuzzle() },
+                        onClick = { viewModel.showHint() },
                         modifier = Modifier
                             .weight(1f)
                             .height(56.dp),
@@ -240,7 +228,7 @@ fun ConnectionPuzzleScreen(
                         ),
                         shape = RoundedCornerShape(12.dp)
                     ) {
-                        Text("SKIP", fontWeight = FontWeight.Bold)
+                        Text("HINT", fontWeight = FontWeight.Bold)
                     }
 
                     Button(
@@ -258,20 +246,6 @@ fun ConnectionPuzzleScreen(
                         Text("SUBMIT", fontWeight = FontWeight.Bold)
                     }
                 }
-//                Button(
-//                    onClick = {  },
-//                    enabled = selectedWords.size == 4,
-//                    modifier = Modifier
-//                        .weight(1f)
-//                        .height(56.dp),
-//                    colors = ButtonDefaults.buttonColors(
-//                        containerColor = Color(0xFFD4AF37),
-//                        contentColor = Color(0xFF2C1810)
-//                    ),
-//                    shape = RoundedCornerShape(12.dp)
-//                ) {
-//                    Text("HOW TO PLAY", fontWeight = FontWeight.Bold)
-//                }
             }
         }
     }
@@ -306,13 +280,11 @@ fun ConnectionPuzzleScreen(
         )
     }
 
-    // Show tutorial overlay if first time playing
     if (showTutorial && tutorialCheckDone) {
         ConnectionsTutorialOverlay(
             soundManager = viewModel.soundManager,
             onDismiss = {
                 showTutorial = false
-                // Mark tutorial as completed
                 coroutineScope.launch {
                     context.connectionTutorialDataStore.edit { prefs ->
                         prefs[TUTORIAL_COMPLETED_KEY] = true

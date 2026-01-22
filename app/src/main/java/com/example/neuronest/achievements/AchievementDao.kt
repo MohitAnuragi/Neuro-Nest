@@ -3,9 +3,6 @@ package com.example.neuronest.achievements
 import androidx.room.*
 import kotlinx.coroutines.flow.Flow
 
-/**
- * Achievement DAO - Database access for achievements
- */
 @Dao
 interface AchievementDao {
 

@@ -44,14 +44,24 @@ fun PuzzleSelectionScreen(
     onToggleMusic: (Boolean) -> Unit
 ) {
     val puzzles = listOf(
-        PuzzleItem("Connection Puzzle", PuzzleRoutes.Connection, R.drawable.connection,"Connections"),
-        PuzzleItem("Kakuro Puzzle", PuzzleRoutes.Kakuro, R.drawable.kakuro,"Kakuro"),
-        PuzzleItem("Sudoku Puzzle", PuzzleRoutes.Sudoku, R.drawable.sudoku,"SudokuPuzzle"),
-        PuzzleItem("Logic Puzzles", PuzzleRoutes.Logic, R.drawable.logicpuzzle,"LogicPuzzles"),
-        PuzzleItem("Sequence Generator", PuzzleRoutes.SequenceGenerator, R.drawable.sequencepuzzle,"SequenceGenerator"),
-        PuzzleItem("Word Scramble", PuzzleRoutes.WordScramble, R.drawable.scramble,"WordScramble"),
+        PuzzleItem(
+            "Connection Puzzle",
+            PuzzleRoutes.Connection,
+            R.drawable.connection,
+            "Connections"
+        ),
+        PuzzleItem("Kakuro Puzzle", PuzzleRoutes.Kakuro, R.drawable.kakuro, "Kakuro"),
+        PuzzleItem("Sudoku Puzzle", PuzzleRoutes.Sudoku, R.drawable.sudoku, "SudokuPuzzle"),
+        PuzzleItem("Logic Puzzles", PuzzleRoutes.Logic, R.drawable.logicpuzzle, "LogicPuzzles"),
+        PuzzleItem(
+            "Sequence Generator",
+            PuzzleRoutes.SequenceGenerator,
+            R.drawable.sequencepuzzle,
+            "SequenceGenerator"
+        ),
+        PuzzleItem("Word Scramble", PuzzleRoutes.WordScramble, R.drawable.scramble, "WordScramble"),
 
-    )
+        )
 
     var isContentLoaded by remember { mutableStateOf(false) }
 
@@ -59,170 +69,181 @@ fun PuzzleSelectionScreen(
         delay(300)
         isContentLoaded = true
     }
-
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = "SELECT PUZZLE",
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.fillMaxWidth(),
-                        textAlign = TextAlign.Center
-                    )
-                },
-                navigationIcon = {
-                    IconButton(
-                        onClick = { navController.navigate(PuzzleRoutes.ProfileSetup.route) },
-                        modifier = Modifier.scale(
-                            animateFloatAsState(
-                                targetValue = if (isContentLoaded) 1f else 0.8f
-                            ).value
-                        )
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack, // Updated to use AutoMirrored version
-                            contentDescription = "Back",
-                            tint = Color.White
-                        )
-                    }
-                },
-                actions = {
-                    IconButton(onClick = { onToggleMusic(!isMusicPlaying) }) {
-                        Icon(
-                            imageVector = if (isMusicPlaying) Icons.Default.MusicNote else Icons.Default.MusicOff,
-                            contentDescription = "Toggle Music",
-                            tint = Color.White
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color(0xFF2C1810),
-                    titleContentColor = Color.White,
-                    actionIconContentColor = Color.White
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(
+                brush = Brush.linearGradient(
+                    colors = listOf(Color(0xFF2C1810), Color(0xFF4A2C1D))
                 )
             )
-        },
-        bottomBar = {
-            // Floating Transparent Bottom Bar
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 32.dp, vertical = 16.dp)
-            ) {
-                Row(
+    ) {
+
+        Scaffold(
+            containerColor = Color.Transparent,
+            topBar = {
+                TopAppBar(
+                    title = {
+                        Text(
+                            text = "SELECT PUZZLE",
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.fillMaxWidth(),
+                            textAlign = TextAlign.Center
+                        )
+                    },
+                    navigationIcon = {
+                        IconButton(
+                            onClick = { navController.navigate(PuzzleRoutes.ProfileSetup.route) },
+                            modifier = Modifier.scale(
+                                animateFloatAsState(
+                                    targetValue = if (isContentLoaded) 1f else 0.8f
+                                ).value
+                            )
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack, // Updated to use AutoMirrored version
+                                contentDescription = "Back",
+                                tint = Color.White
+                            )
+                        }
+                    },
+                    actions = {
+                        IconButton(onClick = { onToggleMusic(!isMusicPlaying) }) {
+                            Icon(
+                                imageVector = if (isMusicPlaying) Icons.Default.MusicNote else Icons.Default.MusicOff,
+                                contentDescription = "Toggle Music",
+                                tint = Color.White
+                            )
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = Color(0xFF2C1810),
+                        titleContentColor = Color.White,
+                        actionIconContentColor = Color.White
+                    )
+                )
+            },
+            bottomBar = {
+                // Floating Transparent Bottom Bar
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(64.dp)
-                        .background(
-                            color = Color.Transparent, // Removed background color
-                            shape = RoundedCornerShape(32.dp)
-                        )
-                        .border(
-                            width = 2.dp,
-                            brush = Brush.linearGradient(
-                                colors = listOf(Color(0xFFFFD700), Color(0xFFD4AF37))
-                            ),
-                            shape = RoundedCornerShape(32.dp)
-                        )
-                        .padding(horizontal = 24.dp),
-                    horizontalArrangement = Arrangement.SpaceEvenly,
-                    verticalAlignment = Alignment.CenterVertically
+                        .padding(horizontal = 32.dp, vertical = 16.dp)
                 ) {
-                    // Home Button
-                    IconButton(
-                        onClick = { navController.navigate(PuzzleRoutes.Selection.route) },
+                    Row(
                         modifier = Modifier
-                            .size(48.dp)
-                            .scale(
-                                animateFloatAsState(
-                                    targetValue = if (isContentLoaded) 1f else 0.8f
-                                ).value
+                            .fillMaxWidth()
+                            .height(64.dp)
+                            .background(
+                                color = Color.Transparent,
+                                shape = RoundedCornerShape(32.dp)
                             )
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Home,
-                            contentDescription = "Home",
-                            tint = Color(0xFFFFD700),
-                            modifier = Modifier.size(28.dp)
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.weight(1f))
-
-                    // Achievements Button
-                    IconButton(
-                        onClick = { navController.navigate(PuzzleRoutes.Achievements.route) },
-                        modifier = Modifier
-                            .size(48.dp)
-                            .scale(
-                                animateFloatAsState(
-                                    targetValue = if (isContentLoaded) 1f else 0.8f
-                                ).value
+                            .border(
+                                width = 2.dp,
+                                brush = Brush.linearGradient(
+                                    colors = listOf(Color(0xFFFFD700), Color(0xFFD4AF37))
+                                ),
+                                shape = RoundedCornerShape(32.dp)
                             )
+                            .padding(horizontal = 24.dp),
+                        horizontalArrangement = Arrangement.SpaceEvenly,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Star,
-                            contentDescription = "Achievements",
-                            tint = Color(0xFFFFD700),
-                            modifier = Modifier.size(28.dp)
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.weight(1f))
-
-                    // Profile Button
-                    IconButton(
-                        onClick = { navController.navigate(PuzzleRoutes.Profile.route) },
-                        modifier = Modifier
-                            .size(48.dp)
-                            .scale(
-                                animateFloatAsState(
-                                    targetValue = if (isContentLoaded) 1f else 0.8f
-                                ).value
+                        // Home Button
+                        IconButton(
+                            onClick = { navController.navigate(PuzzleRoutes.Selection.route) },
+                            modifier = Modifier
+                                .size(48.dp)
+                                .scale(
+                                    animateFloatAsState(
+                                        targetValue = if (isContentLoaded) 1f else 0.8f
+                                    ).value
+                                )
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Home,
+                                contentDescription = "Home",
+                                tint = Color(0xFFFFD700),
+                                modifier = Modifier.size(28.dp)
                             )
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Person,
-                            contentDescription = "Profile",
-                            tint = Color(0xFFFFD700),
-                            modifier = Modifier.size(28.dp)
-                        )
+                        }
+
+                        Spacer(modifier = Modifier.weight(1f))
+
+                        // Achievements Button
+                        IconButton(
+                            onClick = { navController.navigate(PuzzleRoutes.Achievements.route) },
+                            modifier = Modifier
+                                .size(48.dp)
+                                .scale(
+                                    animateFloatAsState(
+                                        targetValue = if (isContentLoaded) 1f else 0.8f
+                                    ).value
+                                )
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Star,
+                                contentDescription = "Achievements",
+                                tint = Color(0xFFFFD700),
+                                modifier = Modifier.size(28.dp)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.weight(1f))
+
+                        // Profile Button
+                        IconButton(
+                            onClick = { navController.navigate(PuzzleRoutes.Profile.route) },
+                            modifier = Modifier
+                                .size(48.dp)
+                                .scale(
+                                    animateFloatAsState(
+                                        targetValue = if (isContentLoaded) 1f else 0.8f
+                                    ).value
+                                )
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Person,
+                                contentDescription = "Profile",
+                                tint = Color(0xFFFFD700),
+                                modifier = Modifier.size(28.dp)
+                            )
+                        }
                     }
                 }
             }
-        }
-    ) { padding ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-        ) {
-            // Wood textured background
-            Image(
-                painter = painterResource(id = R.drawable.wood_texture),
-                contentDescription = "Wood background",
-                modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop
-            )
-
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(2),
+        ) { padding ->
+            Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(16.dp),
-                contentPadding = PaddingValues(bottom = 80.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    .padding(padding)
             ) {
-                items(puzzles) { puzzle ->
-                    PuzzleGridItem(
-                        puzzle = puzzle,
-                        onClick = {  navController.navigate("${PuzzleRoutes.LevelGrid.route}/${puzzle.puzzleType}") },
-                        isContentLoaded = isContentLoaded,
-                        delay = puzzles.indexOf(puzzle) * 100
-                    )
+                // Wood textured background
+                Image(
+                    painter = painterResource(id = R.drawable.wood_texture),
+                    contentDescription = "Wood background",
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(2),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp),
+                    contentPadding = PaddingValues(bottom = 80.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    items(puzzles) { puzzle ->
+                        PuzzleGridItem(
+                            puzzle = puzzle,
+                            onClick = { navController.navigate("${PuzzleRoutes.LevelGrid.route}/${puzzle.puzzleType}") },
+                            isContentLoaded = isContentLoaded,
+                            delay = puzzles.indexOf(puzzle) * 100
+                        )
+                    }
                 }
             }
         }

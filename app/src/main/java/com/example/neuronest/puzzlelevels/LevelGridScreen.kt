@@ -42,7 +42,6 @@ fun LevelGridScreen(
     val levels by viewModel.levels.collectAsState()
     val totalStars by viewModel.totalStars.collectAsState()
 
-    // Always refresh levels when this screen becomes active
     LaunchedEffect(puzzleType) {
         viewModel.loadLevels(puzzleType)
     }
@@ -105,7 +104,6 @@ fun LevelGridScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            // Wood textured background
             Image(
                 painter = painterResource(id = R.drawable.wood_texture),
                 contentDescription = "Wood background",
@@ -137,10 +135,6 @@ fun LevelItem(
     level: LevelDetails,
     onClick: () -> Unit
 ) {
-    // Color scheme based on level status:
-    // - Completed: Green gradient
-    // - Current unlocked: Gold gradient
-    // - Locked: Gray gradient
     val backgroundGradient = when {
         level.isCompleted -> Brush.linearGradient(
             colors = listOf(Color(0xFF2D5016), Color(0xFF4A7C2F))
@@ -154,15 +148,15 @@ fun LevelItem(
     }
 
     val borderColor = when {
-        level.isCompleted -> Color(0xFF6BBF47) // Green border for completed
-        level.isUnlocked -> Color(0xFFFFD700) // Gold border for current
-        else -> Color(0xFF666666) // Gray border for locked
+        level.isCompleted -> Color(0xFF6BBF47)
+        level.isUnlocked -> Color(0xFFFFD700)
+        else -> Color(0xFF666666)
     }
 
     val textColor = when {
-        level.isCompleted -> Color(0xFFB8E994) // Light green text
-        level.isUnlocked -> Color(0xFFFFD700) // Gold text
-        else -> Color(0xFF888888) // Gray text
+        level.isCompleted -> Color(0xFFB8E994)
+        level.isUnlocked -> Color(0xFFFFD700)
+        else -> Color(0xFF888888)
     }
 
     Box(
@@ -214,7 +208,6 @@ fun LevelItem(
                     }
                 }
             } else {
-                // Locked level
                 Icon(
                     imageVector = Icons.Default.Lock,
                     contentDescription = "Locked",

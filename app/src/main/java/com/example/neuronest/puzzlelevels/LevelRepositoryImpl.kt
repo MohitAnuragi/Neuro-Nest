@@ -16,7 +16,6 @@ class LevelRepositoryImpl @Inject constructor(
     }
 
     override suspend fun unlockNextLevel(puzzleType: String, currentLevel: Int) {
-        // Automatically handled by completing the current level
     }
 
     override suspend fun isLevelUnlocked(puzzleType: String, levelNumber: Int): Boolean {
@@ -24,7 +23,6 @@ class LevelRepositoryImpl @Inject constructor(
     }
 
     override suspend fun saveMaxUnlockedLevel(puzzleType: String, level: Int) {
-        // No-op - level unlocking is managed by completion
     }
 
     override suspend fun completeLevel(

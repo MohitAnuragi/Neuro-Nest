@@ -6,7 +6,6 @@ import kotlin.math.max
 object DifficultyGenerator {
 
     fun generateConfig(puzzleType: String, level: Int): PuzzleConfig {
-        // Clamp level to 1-500 just in case
         val safeLevel = level.coerceIn(1, 500)
         
         return when (puzzleType) {
@@ -23,17 +22,12 @@ object DifficultyGenerator {
     }
 
     private fun generateSudokuConfig(level: Int): PuzzleConfig.SudokuConfig {
-        // Level 1: 45 clues (Easy)
-        // Level 500: 17 clues (Hardest possible)
-        // Linear interpolation: 45 - (level/500 * (45-17))
         val clues = 45 - ((level.toFloat() / 500f) * (45 - 17)).toInt()
         return PuzzleConfig.SudokuConfig(clues = clues)
     }
 
     private fun generateWordPuzzleConfig(level: Int): PuzzleConfig.WordPuzzleConfig {
-        // Grid size scales from 5x5 to 12x12
-        // Word count scales from 3 to 15
-        val size = 5 + (level / 70) // Increases every 70 levels
+        val size = 5 + (level / 70)
         val wordCount = 3 + (level / 40)
         return PuzzleConfig.WordPuzzleConfig(
             wordCount = min(wordCount, 15),
@@ -43,8 +37,7 @@ object DifficultyGenerator {
     }
 
     private fun generateMemoryPuzzleConfig(level: Int): PuzzleConfig.MemoryPuzzleConfig {
-        // Grid size: 2x2 (4) to 6x6 (36)
-        // Show time: 5s down to 1s
+
         val gridSize = when {
             level < 20 -> 2 // 2x2
             level < 50 -> 4 // 4x4 (Wait, 2x2=4, 4x4=16. Need even numbers for pairs)

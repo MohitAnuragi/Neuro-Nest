@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import javax.inject.Inject
 import kotlin.math.sqrt
+import kotlin.text.get
 
 data class SudokuCell(
     val value: Int = 0,
@@ -248,22 +249,50 @@ class SudokuPuzzleViewModel @Inject constructor(
     fun showHint() {
         if (_isLevelComplete.value) return
 
-        val selected = _selectedCell.value
-        if (selected == null) {
-            _feedback.value = "Select a cell first!"
+        // First, try to find an empty non-fixed cell
+        var targetCell = _selectedCell.value
+
+        if (targetCell == null) {
+            // No cell selected - find first empty cell
+            for (row in _grid.value.indices) {
+                for (col in _grid.value[row].indices) {
+                    val cell = _grid.value[row][col]
+                    if (!cell.isFixed && cell.value == 0) {
+                        targetCell = Pair(row, col)
+                        _selectedCell.value = targetCell
+                        updateCellSelection(row, col)
+                        break
+                    }
+                }
+                if (targetCell != null) break
+            }
+        }
+
+        if (targetCell == null) {
+            _feedback.value = "No empty cells to hint!"
+            soundManager.playSound(SoundType.INCORRECT_MOVE)
+            return
+        }
+
+        val (row, col) = targetCell
+        val cell = _grid.value[row][col]
+
+        // Don't give hint for fixed cells
+        if (cell.isFixed) {
+            _feedback.value = "This cell is already filled!"
+            soundManager.playSound(SoundType.LOCK)
             return
         }
 
         onHintUsed()
-        val (row, col) = selected
         val correctValue = solutionGrid[row][col]
 
         val newGrid = _grid.value.map { it.toMutableList() }.toMutableList()
-        newGrid[row][col] = _grid.value[row][col].copy(value = correctValue, isError = false)
+        newGrid[row][col] = cell.copy(value = correctValue, isError = false)
         _grid.value = newGrid.map { it.toList() }
 
         soundManager.playSound(SoundType.HINT)
-        _feedback.value = "Hint: The answer is $correctValue"
+        _feedback.value = "Hint: Cell ($row, $col) = $correctValue"
 
         // Check if puzzle is now complete
         val gridValues = _grid.value.map { row -> row.map { it.value } }
@@ -272,10 +301,10 @@ class SudokuPuzzleViewModel @Inject constructor(
             val pointsEarned = calculateScore(timeTaken)
             _feedback.value = "Sudoku Complete! +$pointsEarned points"
             onProblemSolved(timeTaken, pointsEarned)
-
-            // Don't load next puzzle - let the dialog handle navigation
         }
     }
+
+
 
     private fun isPuzzleComplete(grid: List<List<Int>>): Boolean {
         val size = grid.size
@@ -377,11 +406,11 @@ class SudokuPuzzleViewModel @Inject constructor(
     private fun calculateScore(timeTaken: Long): Int {
         val level = _currentLevel.value
         val baseScore = when {
-            level <= 100 -> 200
-            level <= 200 -> 300
-            level <= 300 -> 500
-            level <= 400 -> 700
-            else -> 900
+            level <= 100 -> 10
+            level <= 200 -> 30
+            level <= 300 -> 50
+            level <= 400 -> 70
+            else -> 40
         }
 
         val timeBonus = maxOf(0, (300000 - timeTaken) / 500).toInt()

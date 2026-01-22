@@ -10,10 +10,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-/**
- * Enhanced Base ViewModel for all puzzle types with level progression, timer, and sound support.
- * Extend this in your puzzle ViewModels to automatically get level support.
- */
+
 abstract class BasePuzzleViewModel(
     private val levelRepository: LevelRepository,
     private val profileRepository: ProfileRepository,
@@ -51,7 +48,7 @@ abstract class BasePuzzleViewModel(
 
     protected var levelStartTime: Long = 0
     protected var problemsSolved = 0
-    protected var problemsRequired = 5 // Default, can be overridden
+    protected var problemsRequired = 5
     protected open var hintsUsed = 0
     protected var bestTimeForLevel: Long? = null
 
@@ -69,21 +66,13 @@ abstract class BasePuzzleViewModel(
         soundManager.playSound(SoundType.TRANSITION)
     }
 
-    /**
-     * Called when level is loaded. Override to initialize level-specific data.
-     */
+
     protected abstract fun onLevelLoaded(level: Int)
 
-    /**
-     * Update elapsed time (called from UI timer)
-     */
     fun updateElapsedTime(timeMs: Long) {
         _elapsedTimeMs.value = timeMs
     }
 
-    /**
-     * Called when a problem/move is solved correctly
-     */
     protected open fun onProblemSolved(timeTaken: Long, pointsEarned: Int = 100) {
         problemsSolved++
         _score.value += pointsEarned
@@ -98,28 +87,18 @@ abstract class BasePuzzleViewModel(
         }
     }
 
-    /**
-     * Called when a wrong answer/move is made
-     */
     protected open fun onIncorrectMove() {
         soundManager.playSound(SoundType.INCORRECT_MOVE)
     }
 
-    /**
-     * Called when hint is used
-     */
     protected open fun onHintUsed() {
         hintsUsed++
         soundManager.playSound(SoundType.HINT)
     }
 
-    /**
-     * Calculate stars based on performance. Override for custom logic.
-     */
     protected open fun calculateStars(timeTakenMs: Long, hintsUsed: Int, score: Int): Int {
         val timeSeconds = timeTakenMs / 1000
         return when {
-            // Perfect performance: fast time, no hints, good score
             timeSeconds < 30 && hintsUsed == 0 && score >= 400 -> 3
             timeSeconds < 60 && hintsUsed <= 1 && score >= 300 -> 2
             else -> 1
@@ -127,7 +106,7 @@ abstract class BasePuzzleViewModel(
     }
 
     protected open fun markLevelComplete() {
-        if (_isLevelComplete.value) return // Prevent double completion
+        if (_isLevelComplete.value) return
 
         _isTimerRunning.value = false
         val totalTime = System.currentTimeMillis() - levelStartTime
@@ -137,7 +116,6 @@ abstract class BasePuzzleViewModel(
         _starsEarned.value = stars
 
         viewModelScope.launch {
-            // Mark level as complete in LevelRepository
             val result = levelRepository.completeLevel(
                 puzzleType = puzzleType,
                 levelNumber = _currentLevel.value,
@@ -146,7 +124,6 @@ abstract class BasePuzzleViewModel(
                 timeTaken = totalTime
             )
 
-            // Update profile stats
             profileRepository.updateLevelProgress(
                 puzzleType = puzzleType,
                 levelNumber = _currentLevel.value,
@@ -154,13 +131,11 @@ abstract class BasePuzzleViewModel(
                 stars = stars
             )
 
-            // Reload max unlocked level
             _maxUnlockedLevel.value = levelRepository.getMaxUnlockedLevel(puzzleType)
             
             _isLevelComplete.value = true
             _showLevelCompleteDialog.value = true
 
-            // Play completion sound and star sound
             soundManager.playSound(SoundType.LEVEL_COMPLETE)
             if (stars >= 3) {
                 soundManager.playSound(SoundType.STAR_EARNED)
