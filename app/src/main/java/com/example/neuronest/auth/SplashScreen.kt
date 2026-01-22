@@ -30,16 +30,14 @@ import kotlinx.coroutines.delay
 
 @Composable
 fun SplashScreen(navController: () -> Unit) {
-    // Animation states
     var contentVisible by remember { mutableStateOf(false) }
     var logoScale by remember { mutableStateOf(0f) }
     var textScale by remember { mutableStateOf(0f) }
     var progressVisible by remember { mutableStateOf(false) }
 
-    // Animated values
     val animatedLogoScale by animateFloatAsState(
         targetValue = logoScale,
-        animationSpec = tween(durationMillis = 1200, easing = androidx.compose.animation.core.EaseOutElastic)
+        animationSpec = tween(durationMillis = 700, easing = androidx.compose.animation.core.FastOutSlowInEasing)
     )
 
     val animatedTextScale by animateFloatAsState(
@@ -47,7 +45,6 @@ fun SplashScreen(navController: () -> Unit) {
         animationSpec = tween(durationMillis = 1000, easing = androidx.compose.animation.core.EaseOutBack)
     )
 
-    // Animation sequence
     LaunchedEffect(key1 = true) {
         // Show content with delay
         delay(300)
@@ -99,11 +96,12 @@ fun SplashScreen(navController: () -> Unit) {
             // Animated logo
             AnimatedVisibility(
                 visible = contentVisible,
-                enter = fadeIn(animationSpec = tween(durationMillis = 1000)) +
+                enter = fadeIn(animationSpec = tween(600)) +
                         slideInVertically(
-                            animationSpec = tween(durationMillis = 1000),
-                            initialOffsetY = { fullHeight -> fullHeight / 2 }
+                            animationSpec = tween(600),
+                            initialOffsetY = { it / 6 }
                         )
+
             ) {
                 Box(
                     modifier = Modifier
@@ -131,17 +129,12 @@ fun SplashScreen(navController: () -> Unit) {
                         ),
                     contentAlignment = Alignment.Center
                 ) {
-                    // App logo - replace with your actual logo resource
                     Image(
                         painter = painterResource(id = R.drawable.logoneuro),
                         contentDescription = "Neuro Nest Logo",
-                        modifier = Modifier
-                            .size(120.dp)
-                            .scale(animateFloatAsState(
-                                targetValue = if (contentVisible) 1f else 0.5f,
-                                animationSpec = tween(durationMillis = 800)
-                            ).value)
+                        modifier = Modifier.size(120.dp)
                     )
+
                 }
             }
 
@@ -150,14 +143,18 @@ fun SplashScreen(navController: () -> Unit) {
                 visible = contentVisible,
                 enter = fadeIn(animationSpec = tween(durationMillis = 1000, delayMillis = 500))
             ) {
-                Text(
+                TypingText(
                     text = "NEURO NEST",
-                    fontSize = 36.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = Color(0xFFFFD700),
                     modifier = Modifier.scale(animatedTextScale),
-                    letterSpacing = 2.sp
+                    typingSpeed = 70L,
+                    textStyle = androidx.compose.ui.text.TextStyle(
+                        fontSize = 36.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = Color(0xFFFFD700),
+                        letterSpacing = 2.sp
+                    )
                 )
+
             }
 
             // Animated tagline
@@ -165,13 +162,17 @@ fun SplashScreen(navController: () -> Unit) {
                 visible = contentVisible,
                 enter = fadeIn(animationSpec = tween(durationMillis = 1000, delayMillis = 800))
             ) {
-                Text(
+                TypingText(
                     text = "Brain Training Puzzles",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = Color(0xFFD4AF37),
-                    modifier = Modifier.scale(animatedTextScale * 0.9f)
+                    modifier = Modifier.scale(animatedTextScale * 0.9f),
+                    typingSpeed = 35L,
+                    textStyle = androidx.compose.ui.text.TextStyle(
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Color(0xFFD4AF37)
+                    )
                 )
+
             }
 
             // Animated progress indicator
@@ -211,17 +212,22 @@ fun SplashScreen(navController: () -> Unit) {
                 visible = progressVisible,
                 enter = fadeIn(animationSpec = tween(durationMillis = 800, delayMillis = 300))
             ) {
-                Text(
+                TypingText(
                     text = "Loading puzzles...",
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Normal,
-                    color = Color(0xAAFFFFFF),
-                    modifier = Modifier
-                        .scale(animateFloatAsState(
+                    modifier = Modifier.scale(
+                        animateFloatAsState(
                             targetValue = if (progressVisible) 1f else 0.8f,
                             animationSpec = tween(durationMillis = 1000, delayMillis = 500)
-                        ).value)
+                        ).value
+                    ),
+                    typingSpeed = 45L,
+                    textStyle = androidx.compose.ui.text.TextStyle(
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Normal,
+                        color = Color(0xAAFFFFFF)
+                    )
                 )
+
             }
         }
 
@@ -267,4 +273,29 @@ fun SplashScreen(navController: () -> Unit) {
             }
         }
     }
+}
+
+
+@Composable
+fun TypingText(
+    text: String,
+    modifier: Modifier = Modifier,
+    textStyle: androidx.compose.ui.text.TextStyle,
+    typingSpeed: Long = 40L // ms per character
+) {
+    var displayedText by remember { mutableStateOf("") }
+
+    LaunchedEffect(text) {
+        displayedText = ""
+        text.forEach { char ->
+            displayedText += char
+            delay(typingSpeed)
+        }
+    }
+
+    Text(
+        text = displayedText,
+        modifier = modifier,
+        style = textStyle
+    )
 }

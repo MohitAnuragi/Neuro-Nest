@@ -18,19 +18,17 @@ class ProfileRepositoryImpl @Inject constructor(
 
     private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "user_profile")
 
-    // Keys for level system
+    private val DEFAULT_USER_ID = "default_user"
+
     private object LevelKeys {
-        // Pattern: "LEVEL_{puzzleType}_{levelNumber}_{property}"
         fun levelUnlockedKey(puzzleType: String, level: Int) = stringPreferencesKey("LEVEL_${puzzleType}_${level}_UNLOCKED")
         fun levelStarsKey(puzzleType: String, level: Int) = intPreferencesKey("LEVEL_${puzzleType}_${level}_STARS")
         fun levelScoreKey(puzzleType: String, level: Int) = intPreferencesKey("LEVEL_${puzzleType}_${level}_SCORE")
         fun levelTimeKey(puzzleType: String, level: Int) = longPreferencesKey("LEVEL_${puzzleType}_${level}_TIME")
         fun levelAttemptsKey(puzzleType: String, level: Int) = intPreferencesKey("LEVEL_${puzzleType}_${level}_ATTEMPTS")
 
-        // Current level for each puzzle type
         fun currentLevelKey(puzzleType: String) = intPreferencesKey("CURRENT_LEVEL_$puzzleType")
 
-        // Total stats
         fun totalScoreKey(puzzleType: String) = longPreferencesKey("TOTAL_SCORE_$puzzleType")
         fun totalStarsKey(puzzleType: String) = intPreferencesKey("TOTAL_STARS_$puzzleType")
     }
@@ -42,7 +40,6 @@ class ProfileRepositoryImpl @Inject constructor(
         stars: Int
     ) {
         context.dataStore.edit { preferences ->
-            // Just unlock the next level - NO CONDITIONS!
             val nextLevel = levelNumber + 1
             if (nextLevel <= 500) {
                 preferences[LevelKeys.levelUnlockedKey(puzzleType, nextLevel)] = "UNLOCKED"
@@ -56,7 +53,6 @@ class ProfileRepositoryImpl @Inject constructor(
 
     override suspend fun getLevelProgress(puzzleType: String): LevelProgress {
         return context.dataStore.data.map { preferences ->
-            // Find the highest unlocked level
             var highestUnlocked = 1
             for (level in 1..500) {
                 val isUnlocked = preferences[LevelKeys.levelUnlockedKey(puzzleType, level)] == "UNLOCKED"
@@ -74,10 +70,9 @@ class ProfileRepositoryImpl @Inject constructor(
         }.first()
     }
 
-    // Add this function to check if a level is unlocked
     override suspend fun isLevelUnlocked(puzzleType: String, levelNumber: Int): Boolean {
         return context.dataStore.data.map { preferences ->
-            if (levelNumber == 1) return@map true // Level 1 is always unlocked
+            if (levelNumber == 1) return@map true
 
             val status = preferences[LevelKeys.levelUnlockedKey(puzzleType, levelNumber)]
             status == "UNLOCKED" || status == "COMPLETED"
@@ -149,7 +144,6 @@ class ProfileRepositoryImpl @Inject constructor(
         }
     }
 
-    // Helper function to determine difficulty based on level
     private fun getDifficultyForLevel(level: Int): String {
         return when {
             level <= 100 -> "Easy"
@@ -160,39 +154,22 @@ class ProfileRepositoryImpl @Inject constructor(
         }
     }
 
-    // Existing functions (keep these as they were)
-//    override suspend fun updatePuzzleResult(
-//        puzzleType: String,
-//        difficulty: String,
-//        wasSolved: Boolean,
-//        timeTakenMs: Long,
-//        hintsUsed: Int,
-//        scoreEarned: Long
-//    ) {
-//        // Your existing implementation
-//    }
-
     override suspend fun getPuzzleStats(puzzleType: String): PuzzleStats {
-        // Your existing implementation
         return PuzzleStats(0L, 0, 0, 0.0, 0)
     }
 
     override suspend fun getCurrentStreak(puzzleType: String): Int {
-        // Your existing implementation
         return 0
     }
 
     override suspend fun getPuzzleAccuracy(puzzleType: String): Double {
-        // Your existing implementation
         return 0.0
     }
 
     override suspend fun getTotalAttempts(puzzleType: String): Int {
-        // Your existing implementation
         return 0
     }
 
-    // NEW: Add these functions to your ProfileDao
     override suspend fun updatePuzzleResult(
         puzzleType: String,
         difficulty: String,
@@ -201,39 +178,47 @@ class ProfileRepositoryImpl @Inject constructor(
         hintsUsed: Int,
         scoreEarned: Long
     ) {
-        // Use DAO to store in database
-//        ProfileDao.insertPuzzleResult(
-//            PuzzleResultEntity(
-//                puzzleType = puzzleType,
-//                difficulty = difficulty,
-//                wasSolved = wasSolved,
-//                timeTakenMs = timeTakenMs,
-//                hintsUsed = hintsUsed,
-//                scoreEarned = scoreEarned,
-//                timestamp = System.currentTimeMillis()
-//            )
-//        )
+
     }
 
 
 
     override suspend fun getOrCreateProfile(): UserProfile {
-        var profile = profileDao.getProfile("default_user")
+        var profile = profileDao.getProfile(DEFAULT_USER_ID)
         if (profile == null) {
-            profile = UserProfile()
+            // Create new profile with isProfileSetup = false
+            profile = UserProfile(
+                userId = DEFAULT_USER_ID,
+                isProfileSetup = false,
+                joinDate = System.currentTimeMillis()
+            )
             profileDao.insertProfile(profile)
         }
         return profile
     }
 
-    // NEW: Room-based profile persistence methods
-    suspend fun updateProfileDetails(displayName: String, imageUri: String) {
-        profileDao.updateProfileDetails("default_user", displayName, imageUri)
+    override suspend fun updateProfileDetails(displayName: String, imageUri: String) {
+        val currentProfile = getOrCreateProfile()
+
+        val isSetupComplete = displayName.isNotBlank()
+
+        profileDao.updateProfileDetails(DEFAULT_USER_ID, displayName, imageUri, isSetupComplete)
     }
 
-    suspend fun isProfileSetupComplete(): Boolean {
-        val profile = profileDao.getProfile("default_user")
-        return profile != null && profile.displayName.isNotEmpty() && profile.displayName != "Guest User"
+    override suspend fun isProfileSetupComplete(): Boolean {
+        val profile = profileDao.getProfile(DEFAULT_USER_ID)
+        return profile?.isProfileSetup == true
+    }
+
+    override suspend fun resetProfile() {
+        val resetProfile = UserProfile(
+            userId = DEFAULT_USER_ID,
+            displayName = "",
+            profileImageUri = "",
+            isProfileSetup = false,
+            joinDate = System.currentTimeMillis()
+        )
+        profileDao.insertProfile(resetProfile)
     }
 
 }

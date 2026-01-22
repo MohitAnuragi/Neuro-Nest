@@ -45,7 +45,7 @@ class ConnectionPuzzleViewModel @Inject constructor(
     private var puzzleStartTime: Long = 0
 
     init {
-        problemsRequired = 1 // 1 connection puzzle per level
+        problemsRequired = 1
     }
 
     override fun onLevelLoaded(level: Int) {
@@ -63,11 +63,9 @@ class ConnectionPuzzleViewModel @Inject constructor(
     }
 
     private fun loadPuzzleForLevel(level: Int) {
-        // NO LOOPING - Each level from 1-500 gets exactly one unique puzzle
         val puzzleIndex = (level - 1).coerceIn(0, ConnectionPuzzleData.puzzles.size - 1)
         val puzzle = ConnectionPuzzleData.puzzles[puzzleIndex]
 
-        // Verify that the puzzle level matches the requested level
         if (puzzle.level != level && level <= ConnectionPuzzleData.puzzles.size) {
             android.util.Log.e("ConnectionPuzzle", "⚠️ Level mismatch! Requested: $level, Got: ${puzzle.level}")
         } else {
@@ -120,13 +118,11 @@ class ConnectionPuzzleViewModel @Inject constructor(
         val puzzle = _currentPuzzle.value ?: return
         val guess = _selectedWords.value
 
-        // Check if this matches any unsolved category
         val matchingCategory = puzzle.categories.find { category ->
             category !in _solvedCategories.value && category.words == guess
         }
 
         if (matchingCategory != null) {
-            // Correct guess!
             _solvedCategories.value = _solvedCategories.value + matchingCategory
             _availableWords.value = _availableWords.value.filter { it !in guess }
             _selectedWords.value = emptySet()
@@ -134,7 +130,6 @@ class ConnectionPuzzleViewModel @Inject constructor(
             _isCorrect.value = true
             soundManager.playSound(SoundType.CORRECT_MOVE)
 
-            // Check if puzzle is complete (all 4 categories solved)
             if (_solvedCategories.value.size == 4) {
                 val timeTaken = System.currentTimeMillis() - puzzleStartTime
                 val pointsEarned = calculateScore(timeTaken)
@@ -142,35 +137,18 @@ class ConnectionPuzzleViewModel @Inject constructor(
 
                 onProblemSolved(timeTaken, pointsEarned)
 
-                // Don't load next puzzle - let the dialog handle navigation
             }
         } else {
-            // Wrong guess
             _mistakesRemaining.value = maxOf(0, _mistakesRemaining.value - 1)
             _feedback.value = "Not quite! ${_mistakesRemaining.value} mistakes remaining"
             _isCorrect.value = false
             soundManager.playSound(SoundType.INCORRECT_MOVE)
             onIncorrectMove()
 
-            // Check if out of mistakes
-            if (_mistakesRemaining.value == 0) {
-                _feedback.value = "Out of mistakes! Puzzle failed."
-                skipPuzzle()
-            }
+
         }
     }
 
-    fun skipPuzzle() {
-        if (_isLevelComplete.value) return
-
-        _feedback.value = "Puzzle skipped!"
-        soundManager.playSound(SoundType.TRANSITION)
-
-        // Skip gives no points, but completes the level
-        onProblemSolved(0L, 0)
-
-        // Don't load next puzzle - let the dialog handle navigation
-    }
 
     fun showHint() {
         if (_isLevelComplete.value) return
@@ -182,7 +160,6 @@ class ConnectionPuzzleViewModel @Inject constructor(
 
         onHintUsed()
 
-        // Show one word from the easiest unsolved category
         val hintCategory = unsolvedCategories.sortedBy { it.color }.first()
         val hintWord = hintCategory.words.first()
 
@@ -193,11 +170,11 @@ class ConnectionPuzzleViewModel @Inject constructor(
     private fun calculateScore(timeTaken: Long): Int {
         val level = _currentLevel.value
         val baseScore = when {
-            level <= 100 -> 200
-            level <= 200 -> 300
-            level <= 300 -> 400
-            level <= 400 -> 500
-            else -> 600
+            level <= 100 -> 20
+            level <= 200 -> 40
+            level <= 300 -> 60
+            level <= 400 -> 80
+            else -> 10
         }
 
         val timeBonus = maxOf(0, (120000 - timeTaken) / 300).toInt()

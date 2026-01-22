@@ -26,10 +26,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 
-/**
- * Interactive tutorial overlay for Logic Puzzle
- * Shows step-by-step guide with highlights and animations
- */
 @Composable
 fun HowToPlayLogicOverlay(
     onDismiss: () -> Unit,
@@ -65,7 +61,6 @@ fun HowToPlayLogicOverlay(
             ) {
                 Spacer(modifier = Modifier.height(40.dp))
 
-                // Visual demonstration area
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -80,7 +75,6 @@ fun HowToPlayLogicOverlay(
                     }
                 }
 
-                // Instruction card
                 AnimatedVisibility(
                     visible = true,
                     enter = slideInVertically(
@@ -127,7 +121,7 @@ fun HowToPlayLogicOverlay(
                                 text = when (currentStep) {
                                     0 -> "Each puzzle presents a logic question, riddle, or math problem."
                                     1 -> "Select from multiple choice options or type your answer directly."
-                                    2 -> "Tap the lightbulb icon for a helpful hint when you're stuck."
+                                    2 -> "Tap the Hint Button for a helpful hint when you're stuck."
                                     3 -> "Solve puzzles quickly with fewer hints to earn more stars!"
                                     else -> ""
                                 },
@@ -159,7 +153,6 @@ fun HowToPlayLogicOverlay(
                                 }
                             }
 
-                            // Navigation buttons
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -176,7 +169,7 @@ fun HowToPlayLogicOverlay(
                                         ),
                                         shape = RoundedCornerShape(12.dp)
                                     ) {
-                                        Text("Previous", fontWeight = FontWeight.Bold)
+                                        Text("Back", fontWeight = FontWeight.Bold)
                                     }
                                 }
 
@@ -197,7 +190,7 @@ fun HowToPlayLogicOverlay(
                                     shape = RoundedCornerShape(12.dp)
                                 ) {
                                     Text(
-                                        text = if (currentStep < totalSteps - 1) "Next" else "Start Playing",
+                                        text = if (currentStep < totalSteps - 1) "Next" else "Play",
                                         fontWeight = FontWeight.Bold
                                     )
                                 }
@@ -212,9 +205,6 @@ fun HowToPlayLogicOverlay(
     }
 }
 
-/**
- * Step 1: Show a sample question
- */
 @Composable
 private fun TutorialStep1_ReadQuestion() {
     val scale by animateFloatAsState(
@@ -270,9 +260,7 @@ private fun TutorialStep1_ReadQuestion() {
     }
 }
 
-/**
- * Step 2: Show answer options
- */
+
 @Composable
 private fun TutorialStep2_ChooseAnswer() {
     val scale by animateFloatAsState(
@@ -312,9 +300,7 @@ private fun TutorialStep2_ChooseAnswer() {
     }
 }
 
-/**
- * Step 3: Show hint feature
- */
+
 @Composable
 private fun TutorialStep3_UseHint() {
     val scale by animateFloatAsState(
@@ -327,7 +313,6 @@ private fun TutorialStep3_UseHint() {
         verticalArrangement = Arrangement.spacedBy(24.dp),
         modifier = Modifier.padding(16.dp)
     ) {
-        // Hint button demo
         Box(
             modifier = Modifier
                 .scale(scale)
@@ -370,18 +355,9 @@ private fun TutorialStep3_UseHint() {
             )
         }
 
-        Text(
-            text = "Hints help, but cost points!",
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Bold,
-            color = Color(0xFFFF9800)
-        )
     }
 }
 
-/**
- * Step 4: Show completion celebration
- */
 @Composable
 private fun TutorialStep4_Complete() {
     val scale by animateFloatAsState(
@@ -421,15 +397,8 @@ private fun TutorialStep4_Complete() {
                     fontWeight = FontWeight.Bold,
                     color = Color.White
                 )
-
                 Spacer(modifier = Modifier.height(8.dp))
 
-                Text(
-                    text = "+150 points",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = Color(0xFFFFD700)
-                )
             }
         }
 
@@ -454,9 +423,6 @@ private fun TutorialStep4_Complete() {
     }
 }
 
-/**
- * Helper composable for tutorial option buttons
- */
 @Composable
 private fun TutorialOptionButton(
     text: String,

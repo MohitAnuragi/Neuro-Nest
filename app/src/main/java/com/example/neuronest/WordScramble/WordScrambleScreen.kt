@@ -1,5 +1,6 @@
 package com.example.neuronest.WordScramble
 
+import android.R.attr.hint
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
@@ -28,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.neuronest.R
+import com.example.neuronest.Sequence.HintDisplay
 import com.example.neuronest.puzzlelevels.LevelCompleteDialog
 import com.example.neuronest.puzzlelevels.LevelDataStoreManager
 import com.example.neuronest.puzzlelevels.LevelProgressBar
@@ -83,6 +85,9 @@ fun WordScrambleScreen(
     val isTimerRunning by viewModel.isTimerRunning.collectAsState()
     val elapsedTime by viewModel.elapsedTimeMs.collectAsState()
     val levelProgress by viewModel.levelProgress.collectAsState()
+    val hint by viewModel.hint.collectAsState()
+
+
 
     // Letter state management
     var letterItems by remember { mutableStateOf<List<LetterItem>>(emptyList()) }
@@ -178,6 +183,9 @@ fun WordScrambleScreen(
                     isContentLoaded = isContentLoaded
                 )
 
+                if (hint.isNotEmpty()) {
+                    HintDisplay(hint = hint, isContentLoaded = isContentLoaded)
+                }
                 if (feedback.isNotEmpty()) {
                     FeedbackMessage(
                         feedback = feedback,
@@ -254,7 +262,7 @@ fun WordScrambleScreen(
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     OutlinedButton(
-                        onClick = { viewModel.skipWord() },
+                        onClick = { viewModel.showHint() },
                         modifier = Modifier
                             .weight(1f)
                             .height(56.dp),
@@ -262,7 +270,7 @@ fun WordScrambleScreen(
                             contentColor = Color(0xFFD4AF37)
                         )
                     ) {
-                        Text("SKIP", fontWeight = FontWeight.Bold)
+                        Text("HINT", fontWeight = FontWeight.Bold)
                     }
 
                     Button(

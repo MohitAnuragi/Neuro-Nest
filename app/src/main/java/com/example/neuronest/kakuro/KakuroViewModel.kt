@@ -38,10 +38,9 @@ class KakuroViewModel @Inject constructor(
     private var puzzleStartTime: Long = 0
 
     init {
-        problemsRequired = 3 // 3 Kakuro puzzles per level like other puzzles
+        problemsRequired = 3
     }
 
-    // Public method to play sounds from UI
     fun playSoundEffect(soundType: SoundType) {
         soundManager.playSound(soundType)
     }
@@ -59,7 +58,6 @@ class KakuroViewModel @Inject constructor(
     }
 
     private fun loadPuzzleForLevel(level: Int) {
-        // Load puzzle from data based on level and current puzzle within level
         val puzzleIndexBase = (level - 1) * problemsRequired
         val pickIndex = (puzzleIndexBase + (problemsSolved % problemsRequired)) % KakuroPuzzleData.puzzles.size
         val puzzle = KakuroPuzzleData.puzzles[pickIndex]
@@ -109,7 +107,6 @@ class KakuroViewModel @Inject constructor(
 
         if (cell !is KakuroCell.PlayCell) return
 
-        // Validate input
         val puzzle = _currentPuzzle.value ?: return
         val isValid = validateMove(row, col, value, puzzle)
 
@@ -122,7 +119,6 @@ class KakuroViewModel @Inject constructor(
             _feedback.value = "Good move!"
             _isCorrect.value = true
 
-            // Check if puzzle is complete
             if (isPuzzleComplete(newGrid.map { it.toList() }, puzzle)) {
                 val timeTaken = System.currentTimeMillis() - puzzleStartTime
                 val pointsEarned = calculateScore(timeTaken)
@@ -130,7 +126,6 @@ class KakuroViewModel @Inject constructor(
 
                 onProblemSolved(timeTaken, pointsEarned)
 
-                // Generate next puzzle if level not complete
                 if (!_isLevelComplete.value) {
                     loadPuzzleForLevel(_currentLevel.value)
                 }
@@ -186,7 +181,6 @@ class KakuroViewModel @Inject constructor(
         soundManager.playSound(SoundType.HINT)
         _feedback.value = "Hint: The answer is $correctValue"
 
-        // Check if puzzle is now complete
         if (isPuzzleComplete(newGrid.map { it.toList() }, puzzle)) {
             val timeTaken = System.currentTimeMillis() - puzzleStartTime
             val pointsEarned = calculateScore(timeTaken)
@@ -196,19 +190,6 @@ class KakuroViewModel @Inject constructor(
             if (!_isLevelComplete.value) {
                 loadPuzzleForLevel(_currentLevel.value)
             }
-        }
-    }
-
-    fun skipPuzzle() {
-        if (_isLevelComplete.value) return
-
-        _feedback.value = "Puzzle skipped!"
-        soundManager.playSound(SoundType.TRANSITION)
-
-        onProblemSolved(0L, 0) // Skip gives no points
-
-        if (!_isLevelComplete.value) {
-            loadPuzzleForLevel(_currentLevel.value)
         }
     }
 
@@ -239,7 +220,6 @@ class KakuroViewModel @Inject constructor(
         val cell = puzzle.grid[row][col]
         if (cell !is KakuroCell.PlayCell) return false
 
-        // Check for duplicates in horizontal run
         val acrossRun = puzzle.runs.find { it.id == cell.acrossRunId && !it.isVertical }
         if (acrossRun != null) {
             for ((r, c) in acrossRun.cells) {
@@ -251,7 +231,6 @@ class KakuroViewModel @Inject constructor(
             }
         }
 
-        // Check for duplicates in vertical run
         val downRun = puzzle.runs.find { it.id == cell.downRunId && it.isVertical }
         if (downRun != null) {
             for ((r, c) in downRun.cells) {
@@ -263,7 +242,6 @@ class KakuroViewModel @Inject constructor(
             }
         }
 
-        // Check partial sums don't exceed target
         if (acrossRun != null) {
             val currentSum = acrossRun.cells.sumOf { (r, c) ->
                 val gridCell = if (r == row && c == col) value else {
@@ -288,7 +266,6 @@ class KakuroViewModel @Inject constructor(
     }
 
     private fun isPuzzleComplete(grid: List<List<KakuroCell>>, puzzle: KakuroPuzzle): Boolean {
-        // Check all play cells are filled
         for (row in grid) {
             for (cell in row) {
                 if (cell is KakuroCell.PlayCell && cell.value == 0) {
@@ -297,14 +274,12 @@ class KakuroViewModel @Inject constructor(
             }
         }
 
-        // Check all runs sum correctly
         for (run in puzzle.runs) {
             val sum = run.cells.sumOf { (r, c) ->
                 (grid[r][c] as? KakuroCell.PlayCell)?.value ?: 0
             }
             if (sum != run.targetSum) return false
 
-            // Check no duplicates
             val values = run.cells.mapNotNull { (r, c) ->
                 (grid[r][c] as? KakuroCell.PlayCell)?.value?.takeIf { it > 0 }
             }
@@ -317,11 +292,11 @@ class KakuroViewModel @Inject constructor(
     private fun calculateScore(timeTaken: Long): Int {
         val level = _currentLevel.value
         val baseScore = when {
-            level <= 100 -> 150
-            level <= 200 -> 200
-            level <= 300 -> 250
-            level <= 400 -> 300
-            else -> 350
+            level <= 100 -> 20
+            level <= 200 -> 40
+            level <= 300 -> 60
+            level <= 400 -> 100
+            else -> 50
         }
 
         val timeBonus = maxOf(0, (180000 - timeTaken) / 300).toInt()

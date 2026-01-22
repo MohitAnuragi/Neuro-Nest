@@ -10,6 +10,12 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import javax.inject.Inject
+import kotlin.collections.get
+import kotlin.inc
+import kotlin.plus
+import kotlin.text.compareTo
+import kotlin.text.get
+import kotlin.toString
 
 @HiltViewModel
 class WordScrambleViewModel @Inject constructor(
@@ -35,11 +41,15 @@ class WordScrambleViewModel @Inject constructor(
     private val _isCorrect = MutableStateFlow<Boolean?>(null)
     val isCorrect: StateFlow<Boolean?> = _isCorrect.asStateFlow()
 
+    private val _hint = MutableStateFlow("")
+    val hint: StateFlow<String> = _hint.asStateFlow()
+
+
 
     private var puzzleStartTime: Long = 0
 
     init {
-        problemsRequired = 5 // 5 words per level
+        problemsRequired = 5
     }
 
     // Public method to play sounds from UI
@@ -48,7 +58,6 @@ class WordScrambleViewModel @Inject constructor(
     }
 
     override fun onLevelLoaded(level: Int) {
-        // Load the data-driven puzzle(s) for this level
         loadPuzzleForLevel(level)
         puzzleStartTime = System.currentTimeMillis()
     }
@@ -118,16 +127,49 @@ class WordScrambleViewModel @Inject constructor(
         }
     }
 
-    fun skipWord() {
+    fun showHint() {
         if (_isLevelComplete.value) return
 
-        _feedback.value = "Skipped! Word was ${_currentWord.value}"
-        _isCorrect.value = null
-        soundManager.playSound(SoundType.TRANSITION)
+        val currentAnswer = _userAnswer.value
+        val correctAnswer = _currentWord.value
 
-        loadPuzzleForLevel(_currentLevel.value)
-        _userAnswer.value = ""
+        // If user hasn't started typing, reveal first letter
+        if (currentAnswer.isEmpty()) {
+            _userAnswer.value = correctAnswer[0].toString()
+            _feedback.value = "Hint: First letter revealed!"
+            hintsUsed++
+            soundManager.playSound(SoundType.HINT)
+            return
+        }
+
+        // If user has typed something, find next correct letter to reveal
+        if (currentAnswer.length < correctAnswer.length) {
+            val nextPosition = currentAnswer.length
+            val nextLetter = correctAnswer[nextPosition]
+            _userAnswer.value = currentAnswer + nextLetter
+            _feedback.value = "Hint: Next letter revealed!"
+            hintsUsed++
+            soundManager.playSound(SoundType.HINT)
+            return
+        }
+
+        // If answer is complete length but wrong, show feedback about wrong positions
+        if (currentAnswer.length == correctAnswer.length) {
+            val wrongPositions = currentAnswer.indices.filter {
+                currentAnswer[it] != correctAnswer[it]
+            }
+
+            if (wrongPositions.isNotEmpty()) {
+                val firstWrongPos = wrongPositions.first()
+                _feedback.value = "Hint: Letter at position ${firstWrongPos + 1} is wrong!"
+                hintsUsed++
+                soundManager.playSound(SoundType.HINT)
+            } else {
+                _feedback.value = "Your answer looks correct! Try submitting."
+            }
+        }
     }
+
 
     private fun loadPuzzleForLevel(level: Int) {
         // Use the data file to load puzzles based on the current level and progress within the level
@@ -168,12 +210,12 @@ class WordScrambleViewModel @Inject constructor(
 
     private fun calculateScore(timeTaken: Long): Int {
         val baseScore = when (getDifficultyForLevel(_currentLevel.value)) {
-            "Easy" -> 100
-            "Medium" -> 150
-            "Hard" -> 200
-            "Expert" -> 250
-            "Master" -> 300
-            else -> 100
+            "Easy" -> 20
+            "Medium" -> 40
+            "Hard" -> 60
+            "Expert" -> 80
+            "Master" -> 100
+            else -> 50
         }
 
         val timeBonus = maxOf(0, (40000 - timeTaken) / 100).toInt()
@@ -188,9 +230,5 @@ class WordScrambleViewModel @Inject constructor(
             avgTimePerWord < 30000 && hintsUsed <= 1 && score >= 400 -> 2
             else -> 1
         }
-    }
-
-    fun resetIsCorrectFlag() {
-        _isCorrect.value = null
     }
 }

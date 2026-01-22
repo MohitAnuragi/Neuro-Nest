@@ -42,7 +42,7 @@ class LevelDataStoreManager @Inject constructor(
         }
     }
 
-    // Tutorial completion methods
+
     suspend fun saveTutorialCompleted(puzzleType: String) {
         val key = booleanPreferencesKey("tutorial_completed_${puzzleType}")
         context.dataStore.edit { preferences ->

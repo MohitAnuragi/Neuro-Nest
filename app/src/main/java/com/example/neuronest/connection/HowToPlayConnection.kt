@@ -27,9 +27,6 @@ import com.example.neuronest.sound.SoundManager
 import com.example.neuronest.sound.SoundType
 import kotlinx.coroutines.delay
 
-/**
- * Tutorial overlay for Connections puzzle
- */
 @Composable
 fun ConnectionsTutorialOverlay(
     soundManager: SoundManager,
@@ -38,7 +35,6 @@ fun ConnectionsTutorialOverlay(
     var currentStep by remember { mutableIntStateOf(0) }
     val totalSteps = 4
 
-    // Tutorial words (example group)
     val tutorialWords = listOf(
         "Apple", "Banana", "Orange", "Grape",
         "Rose", "Tulip", "Daisy", "Lily",
@@ -46,18 +42,16 @@ fun ConnectionsTutorialOverlay(
         "Lion", "Tiger", "Bear", "Wolf"
     )
 
-    // Highlighted words for step 2 (fruits group)
     val highlightedWords = setOf("Apple", "Banana", "Orange", "Grape")
 
     LaunchedEffect(currentStep) {
         when (currentStep) {
             1 -> {
-                // Auto-play selection sound when highlighting words
                 delay(500)
                 soundManager.playSound(SoundType.BUTTON_CLICK)
             }
+
             3 -> {
-                // Play success sound when group locks
                 delay(300)
                 soundManager.playSound(SoundType.CORRECT_MOVE)
                 delay(800)
@@ -80,7 +74,6 @@ fun ConnectionsTutorialOverlay(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.SpaceBetween
         ) {
-            // Close button
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.End
@@ -100,12 +93,11 @@ fun ConnectionsTutorialOverlay(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Tutorial content based on current step
             AnimatedContent(
                 targetState = currentStep,
                 transitionSpec = {
                     fadeIn(animationSpec = tween(500)) togetherWith
-                    fadeOut(animationSpec = tween(300))
+                            fadeOut(animationSpec = tween(300))
                 },
                 label = "tutorial_step"
             ) { step ->
@@ -113,22 +105,18 @@ fun ConnectionsTutorialOverlay(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(32.dp)
                 ) {
-                    // Step instruction text
                     TutorialStepText(step = step)
 
-                    // Tutorial grid visualization
                     TutorialGrid(
                         words = tutorialWords,
                         highlightedWords = if (step >= 1) highlightedWords else emptySet(),
                         showLocked = step >= 3
                     )
 
-                    // Submit button highlight for step 2
                     if (step == 2) {
                         TutorialSubmitButton()
                     }
 
-                    // Locked group animation for step 3
                     if (step == 3) {
                         LockedGroupDisplay()
                     }
@@ -137,12 +125,10 @@ fun ConnectionsTutorialOverlay(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Step indicator and navigation
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Step dots
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
@@ -151,7 +137,6 @@ fun ConnectionsTutorialOverlay(
                     }
                 }
 
-                // Navigation buttons
                 if (currentStep < totalSteps - 1) {
                     Button(
                         onClick = {
@@ -258,7 +243,6 @@ private fun TutorialGrid(
     )
 
     if (showLocked) {
-        // Show locked group
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -279,7 +263,7 @@ private fun TutorialGrid(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Text(
-                    text = "FRUITS 🍎",
+                    text = "FRUITS",
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color(0xFF4CAF50)
@@ -293,7 +277,6 @@ private fun TutorialGrid(
             }
         }
     } else {
-        // Show grid
         LazyVerticalGrid(
             columns = GridCells.Fixed(4),
             modifier = Modifier

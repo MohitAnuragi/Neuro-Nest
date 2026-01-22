@@ -1,10 +1,7 @@
 package com.example.neuronest.kakuro
 
-// Predefined Kakuro puzzles with 100 levels - ALL SOLUTIONS VERIFIED
 object KakuroPuzzleData {
     val puzzles: List<KakuroPuzzle> = listOf(
-        // Easy 3x3 Kakuro Puzzles (Levels 1-20)
-        // Level 1: Simple 3x3
         KakuroPuzzle(
             rows = 3,
             cols = 3,
@@ -32,14 +29,13 @@ object KakuroPuzzleData {
                 KakuroRun(3, 4, listOf(Pair(2, 1), Pair(2, 2)), false)   // Across 4
             ),
             solution = mapOf(
-                Pair(1, 1) to 1,  // Down:4 (1,3), Across:3 (1,2)
-                Pair(1, 2) to 2,  // Down:3 (2,1), Across:3 (1,2)
-                Pair(2, 1) to 3,  // Down:4 (1,3), Across:4 (3,1)
-                Pair(2, 2) to 1   // Down:3 (2,1), Across:4 (3,1)
+                Pair(1, 1) to 1,
+                Pair(1, 2) to 2,
+                Pair(2, 1) to 3,
+                Pair(2, 2) to 1
             )
         ),
 
-        // Level 2: Simple 3x3
         KakuroPuzzle(
             rows = 3,
             cols = 3,
@@ -74,7 +70,6 @@ object KakuroPuzzleData {
             )
         ),
 
-        // Level 3: 4x4 Easy
         KakuroPuzzle(
             rows = 4,
             cols = 4,
@@ -118,7 +113,6 @@ object KakuroPuzzleData {
             )
         ),
 
-        // Continue with more levels (4-100)
         *generateValidKakuroPuzzles(4, 20, "Easy", 3),
         *generateValidKakuroPuzzles(21, 40, "Easy", 4),
         *generateValidKakuroPuzzles(41, 60, "Medium", 4),

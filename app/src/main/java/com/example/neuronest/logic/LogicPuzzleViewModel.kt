@@ -128,17 +128,6 @@ class LogicPuzzleViewModel @Inject constructor(
         }
     }
 
-    fun skipPuzzle() {
-        if (_isLevelComplete.value) return
-
-        val puzzle = _currentPuzzle.value ?: return
-        _feedback.value = "Skipped! Answer was ${puzzle.answer}"
-        _isCorrect.value = null
-        soundManager.playSound(SoundType.TRANSITION)
-
-        loadPuzzleForLevel(_currentLevel.value)
-    }
-
     fun toggleHint() {
         if (_isLevelComplete.value) return
 
@@ -151,11 +140,11 @@ class LogicPuzzleViewModel @Inject constructor(
     private fun calculateScore(timeTaken: Long): Int {
         val level = _currentLevel.value
         val baseScore = when {
-            level <= 100 -> 100
-            level <= 200 -> 150
-            level <= 300 -> 200
-            level <= 400 -> 250
-            else -> 300
+            level <= 100 -> 20
+            level <= 200 -> 40
+            level <= 300 -> 60
+            level <= 400 -> 80
+            else -> 100
         }
 
         val timeBonus = maxOf(0, (50000 - timeTaken) / 200).toInt()

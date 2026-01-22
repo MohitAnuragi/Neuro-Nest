@@ -49,14 +49,13 @@ fun LogicRiddlesScreen(
     val dataStoreManager = remember { LevelDataStoreManager(context) }
     val coroutineScope = rememberCoroutineScope()
 
-    // Tutorial state
-    val isTutorialCompleted by dataStoreManager.isTutorialCompletedFlow("LogicPuzzles").collectAsState(initial = true)
+    val isTutorialCompleted by dataStoreManager.isTutorialCompletedFlow("LogicPuzzles")
+        .collectAsState(initial = true)
     var showTutorial by remember { mutableStateOf(false) }
 
-    // Show tutorial only on first launch and level 1
     LaunchedEffect(level, isTutorialCompleted) {
         if (level == 1 && !isTutorialCompleted) {
-            delay(500) // Brief delay before showing tutorial
+            delay(500)
             showTutorial = true
         }
     }
@@ -105,13 +104,6 @@ fun LogicRiddlesScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { viewModel.toggleHint() }) {
-                        Icon(
-                            imageVector = Icons.Default.Lightbulb,
-                            contentDescription = "Hint",
-                            tint = if (showHint) Color(0xFFFFD700) else Color.White
-                        )
-                    }
                     PuzzleTimer(
                         isRunning = isTimerRunning,
                         onTimeUpdate = { timeMs ->
@@ -194,7 +186,7 @@ fun LogicRiddlesScreen(
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         OutlinedButton(
-                            onClick = { viewModel.skipPuzzle() },
+                            onClick = { viewModel.toggleHint() },
                             modifier = Modifier
                                 .weight(1f)
                                 .height(56.dp),
@@ -202,7 +194,7 @@ fun LogicRiddlesScreen(
                                 contentColor = Color(0xFFD4AF37)
                             )
                         ) {
-                            Text("SKIP", fontWeight = FontWeight.Bold)
+                            Text("HINT", fontWeight = FontWeight.Bold)
                         }
 
                         Button(
@@ -254,7 +246,6 @@ fun LogicRiddlesScreen(
         )
     }
 
-    // Tutorial overlay
     if (showTutorial) {
         HowToPlayLogicOverlay(
             onDismiss = {

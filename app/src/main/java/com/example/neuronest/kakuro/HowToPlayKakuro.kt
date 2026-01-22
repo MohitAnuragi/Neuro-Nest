@@ -24,10 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 
-/**
- * Interactive tutorial overlay for Kakuro puzzle
- * Shows step-by-step guide with highlights and animations
- */
+
 @Composable
 fun HowToPlayKakuroOverlay(
     onDismiss: () -> Unit,
@@ -63,7 +60,6 @@ fun HowToPlayKakuroOverlay(
             ) {
                 Spacer(modifier = Modifier.height(40.dp))
 
-                // Visual demonstration area
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -78,7 +74,6 @@ fun HowToPlayKakuroOverlay(
                     }
                 }
 
-                // Instruction card
                 AnimatedVisibility(
                     visible = true,
                     enter = slideInVertically(
@@ -137,7 +132,6 @@ fun HowToPlayKakuroOverlay(
 
                             Spacer(modifier = Modifier.height(20.dp))
 
-                            // Progress indicator
                             Row(
                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                                 modifier = Modifier.padding(bottom = 16.dp)
@@ -157,7 +151,6 @@ fun HowToPlayKakuroOverlay(
                                 }
                             }
 
-                            // Navigation buttons
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -174,7 +167,7 @@ fun HowToPlayKakuroOverlay(
                                         ),
                                         shape = RoundedCornerShape(12.dp)
                                     ) {
-                                        Text("Previous", fontWeight = FontWeight.Bold)
+                                        Text("Back", fontWeight = FontWeight.Bold)
                                     }
                                 }
 
@@ -195,7 +188,7 @@ fun HowToPlayKakuroOverlay(
                                     shape = RoundedCornerShape(12.dp)
                                 ) {
                                     Text(
-                                        text = if (currentStep < totalSteps - 1) "Next" else "Start Playing",
+                                        text = if (currentStep < totalSteps - 1) "Next" else "Play",
                                         fontWeight = FontWeight.Bold
                                     )
                                 }
@@ -210,9 +203,6 @@ fun HowToPlayKakuroOverlay(
     }
 }
 
-/**
- * Step 1: Highlight black clue cells
- */
 @Composable
 private fun TutorialStep1_ClueCell() {
     val scale by animateFloatAsState(
@@ -229,14 +219,12 @@ private fun TutorialStep1_ClueCell() {
                 .size(160.dp)
                 .scale(scale)
         ) {
-            // Black clue cell example
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(Color(0xFF1A1A1A), RoundedCornerShape(12.dp))
                     .border(3.dp, Color(0xFFFFD700), RoundedCornerShape(12.dp))
             ) {
-                // Diagonal line
                 Canvas(modifier = Modifier.fillMaxSize()) {
                     drawLine(
                         color = Color(0xFF666666),
@@ -246,7 +234,6 @@ private fun TutorialStep1_ClueCell() {
                     )
                 }
 
-                // Down sum (top-right)
                 Text(
                     text = "6",
                     fontSize = 28.sp,
@@ -257,7 +244,6 @@ private fun TutorialStep1_ClueCell() {
                         .padding(12.dp)
                 )
 
-                // Across sum (bottom-left)
                 Text(
                     text = "5",
                     fontSize = 28.sp,
@@ -272,9 +258,6 @@ private fun TutorialStep1_ClueCell() {
     }
 }
 
-/**
- * Step 2: Show white play cells with a clue
- */
 @Composable
 private fun TutorialStep2_PlayCells() {
     val scale by animateFloatAsState(
@@ -286,7 +269,7 @@ private fun TutorialStep2_PlayCells() {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Clue cell
+
         Box(
             modifier = Modifier
                 .size(100.dp)
@@ -313,7 +296,6 @@ private fun TutorialStep2_PlayCells() {
             )
         }
 
-        // Play cells (horizontal run)
         Row(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             modifier = Modifier.scale(scale)
@@ -332,9 +314,6 @@ private fun TutorialStep2_PlayCells() {
     }
 }
 
-/**
- * Step 3: Show no repeats rule
- */
 @Composable
 private fun TutorialStep3_NoRepeats() {
     val scale by animateFloatAsState(
@@ -346,7 +325,6 @@ private fun TutorialStep3_NoRepeats() {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
-        // Correct example
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -373,7 +351,6 @@ private fun TutorialStep3_NoRepeats() {
                 .padding(vertical = 8.dp)
         )
 
-        // Incorrect example
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -395,9 +372,6 @@ private fun TutorialStep3_NoRepeats() {
     }
 }
 
-/**
- * Step 4: Show completed puzzle celebration
- */
 @Composable
 private fun TutorialStep4_Complete() {
     val scale by animateFloatAsState(
@@ -409,7 +383,6 @@ private fun TutorialStep4_Complete() {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Mini completed grid
         Column(
             verticalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier.scale(scale)
@@ -439,9 +412,6 @@ private fun TutorialStep4_Complete() {
     }
 }
 
-/**
- * Helper composable for tutorial play cells
- */
 @Composable
 private fun TutorialPlayCell(
     value: String,

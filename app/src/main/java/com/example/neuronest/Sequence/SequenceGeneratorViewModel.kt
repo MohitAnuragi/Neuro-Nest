@@ -133,12 +133,12 @@ class SequenceGeneratorViewModel @Inject constructor(
 
     private fun calculateScore(timeTaken: Long): Int {
         val baseScore = when (getDifficultyForLevel(_currentLevel.value)) {
-            "Easy" -> 100
-            "Medium" -> 150
-            "Hard" -> 200
-            "Expert" -> 250
-            "Master" -> 300
-            else -> 100
+            "Easy" -> 10
+            "Medium" -> 20
+            "Hard" -> 40
+            "Expert" -> 60
+            "Master" -> 80
+            else -> 50
         }
 
         val timeBonus = maxOf(0, (40000 - timeTaken) / 100).toInt()

@@ -23,10 +23,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 
-/**
- * Interactive tutorial overlay for Sudoku puzzle
- * Shows step-by-step guide with highlights and animations
- */
+
 @Composable
 fun HowToPlaySudokuOverlay(
     onDismiss: () -> Unit,
@@ -173,7 +170,7 @@ fun HowToPlaySudokuOverlay(
                                         ),
                                         shape = RoundedCornerShape(12.dp)
                                     ) {
-                                        Text("Previous", fontWeight = FontWeight.Bold)
+                                        Text("Back", fontWeight = FontWeight.Bold)
                                     }
                                 }
 
@@ -194,7 +191,7 @@ fun HowToPlaySudokuOverlay(
                                     shape = RoundedCornerShape(12.dp)
                                 ) {
                                     Text(
-                                        text = if (currentStep < totalSteps - 1) "Next" else "Start Playing",
+                                        text = if (currentStep < totalSteps - 1) "Next" else "Play",
                                         fontWeight = FontWeight.Bold
                                     )
                                 }
@@ -322,7 +319,7 @@ private fun TutorialStep3_Box() {
         }
 
         Text(
-            text = "No repeats in a Subgrid 2×2 box ✓",
+            text = "No repeats in a Subgrid 3×3 box ✓",
             fontSize = 18.sp,
             fontWeight = FontWeight.Bold,
             color = Color(0xFF10B981),

@@ -33,7 +33,6 @@ class LevelViewModel @Inject constructor(
         
         viewModelScope.launch {
             try {
-                // Subscribe to live updates from the database
                 repository.getLevelProgressFlow(puzzleType).collect { levelProgress ->
                     val maxUnlocked = levelProgress.currentLevel
 

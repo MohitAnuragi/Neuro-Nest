@@ -3,7 +3,6 @@ package com.example.neuronest.navigation
 import com.example.neuronest.backgroundMusic.BackgroundMusicPlayer
 import androidx.annotation.DrawableRes
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -34,27 +33,10 @@ fun PuzzleNavigation() {
     val navController = rememberNavController()
     var isMusicPlaying by remember { mutableStateOf(true) }
     val profileViewModel: ProfileViewModel = hiltViewModel()
-    val needsSetup by profileViewModel.needsProfileSetup.collectAsState()
-
-    // Track if profile check is complete
-    var profileCheckComplete by remember { mutableStateOf(false) }
-    var initialCheckDone by remember { mutableStateOf(false) }
-
-    // Wait for profile check to complete with sufficient time for Room database
-    LaunchedEffect(Unit) {
-        kotlinx.coroutines.delay(1000) // Allow time for Room database to load
-        initialCheckDone = true
-    }
-
-    // Wait for both timing and setup check to complete
-    LaunchedEffect(needsSetup, initialCheckDone) {
-        if (initialCheckDone) {
-            profileCheckComplete = true
-        }
-    }
+    val needsSetupNullable by profileViewModel.needsProfileSetup.collectAsState()
 
     BackgroundMusicPlayer(
-        audioResId = R.raw.neuroback,
+        audioResId = R.raw.neuro_bg_music,
         isMusicPlaying = isMusicPlaying
     )
 
@@ -64,9 +46,9 @@ fun PuzzleNavigation() {
     ) {
         composable(PuzzleRoutes.splash.route) {
             SplashScreen {
-                // Only navigate after profile check is complete
-                if (profileCheckComplete) {
-                    if (needsSetup) {
+                if (needsSetupNullable == null) {
+                } else {
+                    if (needsSetupNullable == true) {
                         navController.navigate(PuzzleRoutes.ProfileSetup.route) {
                             popUpTo(PuzzleRoutes.splash.route) { inclusive = true }
                         }
@@ -260,12 +242,14 @@ fun PuzzleNavigation() {
 
         composable(PuzzleRoutes.Profile.route) {
             ProfileScreen(
+                onBack = { navController.popBackStack() },
                 onSignOut = {
                     profileViewModel.resetProfile()
                     navController.navigate(PuzzleRoutes.splash.route) {
                         popUpTo(PuzzleRoutes.splash.route) { inclusive = true }
                     }
                 }
+
             )
         }
 
@@ -275,7 +259,8 @@ fun PuzzleNavigation() {
             )
         }
 
-        composable("${PuzzleRoutes.Connection.route}/{level}",
+        composable(
+            "${PuzzleRoutes.Connection.route}/{level}",
             arguments = listOf(navArgument("level") { type = NavType.IntType })
         ) { backStackEntry ->
             val level = backStackEntry.arguments?.getInt("level") ?: 1

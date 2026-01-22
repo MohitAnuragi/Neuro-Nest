@@ -6,10 +6,13 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -170,7 +173,7 @@ fun HowToPlaySequenceOverlay(
                                         ),
                                         shape = RoundedCornerShape(12.dp)
                                     ) {
-                                        Text("Previous", fontWeight = FontWeight.Bold)
+                                        Text("Back", fontWeight = FontWeight.Bold)
                                     }
                                 }
 
@@ -191,7 +194,7 @@ fun HowToPlaySequenceOverlay(
                                     shape = RoundedCornerShape(12.dp)
                                 ) {
                                     Text(
-                                        text = if (currentStep < totalSteps - 1) "Next" else "Start Playing",
+                                        text = if (currentStep < totalSteps - 1) "Next" else "Play",
                                         fontWeight = FontWeight.Bold
                                     )
                                 }
@@ -548,14 +551,6 @@ fun TutorialStep4_Complete() {
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFFFFD700)
-                    )
-
-                    Text(
-                        text = "Complete sequences quickly to earn up to 3 stars and unlock harder levels!",
-                        fontSize = 14.sp,
-                        color = Color.White.copy(alpha = 0.85f),
-                        textAlign = TextAlign.Center,
-                        lineHeight = 20.sp
                     )
                 }
             }

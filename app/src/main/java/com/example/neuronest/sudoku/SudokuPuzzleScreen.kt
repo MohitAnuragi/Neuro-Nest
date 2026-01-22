@@ -195,7 +195,7 @@ fun SudokuPuzzleScreen(
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     OutlinedButton(
-                        onClick = { viewModel.skipPuzzle() },
+                        onClick = { viewModel.showHint() },
                         modifier = Modifier
                             .weight(1f)
                             .height(56.dp),
@@ -204,7 +204,7 @@ fun SudokuPuzzleScreen(
                         ),
                         shape = RoundedCornerShape(12.dp)
                     ) {
-                        Text("SKIP", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        Text("HINT", fontWeight = FontWeight.Bold, fontSize = 16.sp)
                     }
 
                     Button(

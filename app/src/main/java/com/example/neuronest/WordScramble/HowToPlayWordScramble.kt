@@ -170,7 +170,7 @@ fun HowToPlayWordScrambleOverlay(
                                         ),
                                         shape = RoundedCornerShape(12.dp)
                                     ) {
-                                        Text("Previous", fontWeight = FontWeight.Bold)
+                                        Text("Back", fontWeight = FontWeight.Bold)
                                     }
                                 }
 
@@ -191,7 +191,7 @@ fun HowToPlayWordScrambleOverlay(
                                     shape = RoundedCornerShape(12.dp)
                                 ) {
                                     Text(
-                                        text = if (currentStep < totalSteps - 1) "Next" else "Start Playing",
+                                        text = if (currentStep < totalSteps - 1) "Next" else "Play",
                                         fontWeight = FontWeight.Bold
                                     )
                                 }
@@ -221,11 +221,6 @@ private fun TutorialStep1_ScrambledWord() {
         verticalArrangement = Arrangement.Center,
         modifier = Modifier.padding(16.dp)
     ) {
-        Text(
-            text = "🔤",
-            fontSize = 64.sp,
-            modifier = Modifier.padding(bottom = 16.dp)
-        )
 
         Card(
             modifier = Modifier

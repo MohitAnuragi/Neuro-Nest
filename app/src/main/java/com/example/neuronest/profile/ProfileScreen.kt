@@ -1,7 +1,5 @@
 package com.example.neuronest.profile
 
-import android.net.Uri
-import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
@@ -13,15 +11,14 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
@@ -29,38 +26,41 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.rememberAsyncImagePainter
 import com.example.neuronest.R
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import kotlin.math.round
 
-// Extension functions for formatting
-private fun Long.toFormattedDate(): String {
-    return SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()).format(Date(this))
-}
 
-private fun Double.format(decimalPlaces: Int): String {
-    val factor = Math.pow(10.0, decimalPlaces.toDouble())
-    return (round(this * factor) / factor).toString()
+private fun Long.toFormattedJoinDate(): String {
+    return try {
+        val sdf = SimpleDateFormat("MMM yyyy", Locale.getDefault())
+        "Joined: ${sdf.format(Date(this))}"
+    } catch (e: Exception) {
+        "—"
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
     viewModel: ProfileViewModel = hiltViewModel(),
+    onBack: () -> Unit = {},
     onSignOut: () -> Unit = {},
     onEditProfile: () -> Unit = {}
 ) {
     val profile by viewModel.profile.collectAsState()
-    var isContentLoaded by rememberSaveable { mutableStateOf(false) }
+    val puzzleProgress by viewModel.puzzleProgress.collectAsState()
+
+    var isContentLoaded by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
-        // Refresh profile data and simulate loading delay for animations
         viewModel.refresh()
         kotlinx.coroutines.delay(300)
         isContentLoaded = true
@@ -76,27 +76,17 @@ fun ProfileScreen(
                         fontWeight = FontWeight.Bold
                     )
                 },
-                actions = {
-                    IconButton(
-                        onClick = onEditProfile,
-                        modifier = Modifier.scale(animateFloatAsState(
-                            targetValue = if (isContentLoaded) 1f else 0.8f,
-                            animationSpec = tween(durationMillis = 500)
-                        ).value)
-                    ) {
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
                         Icon(
-                            imageVector = Icons.Default.Person,
-                            contentDescription = "Edit Profile",
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back",
                             tint = Color.White
                         )
                     }
-                    IconButton(
-                        onClick = onSignOut,
-                        modifier = Modifier.scale(animateFloatAsState(
-                            targetValue = if (isContentLoaded) 1f else 0.8f,
-                            animationSpec = tween(durationMillis = 500)
-                        ).value)
-                    ) {
+                },
+                actions = {
+                    IconButton(onClick = onSignOut) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ExitToApp,
                             contentDescription = "Sign Out",
@@ -106,8 +96,7 @@ fun ProfileScreen(
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = Color(0xFF2C1810),
-                    titleContentColor = Color.White,
-                    actionIconContentColor = Color.White
+                    titleContentColor = Color.White
                 )
             )
         }
@@ -119,7 +108,7 @@ fun ProfileScreen(
         ) {
             // Wood textured background
             Image(
-                painter = rememberAsyncImagePainter(R.drawable.wood_texture),
+                painter = painterResource(id = R.drawable.wood_texture),
                 contentDescription = "Wood background",
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop
@@ -130,57 +119,44 @@ fun ProfileScreen(
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
                     .padding(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Animated entrance for profile header
-                val headerPadding by animateDpAsState(
-                    targetValue = if (isContentLoaded) 0.dp else 100.dp,
-                    animationSpec = tween(durationMillis = 800)
+                ProfileHeader(
+                    profile = profile,
+                    isContentLoaded = isContentLoaded
                 )
 
-                Box(
-                    modifier = Modifier
-                        .offset(y = headerPadding)
-                        .alpha(animateFloatAsState(
-                            targetValue = if (isContentLoaded) 1f else 0f,
-                            animationSpec = tween(durationMillis = 800)
-                        ).value)
-                ) {
-                    ProfileHeader(profile, isContentLoaded)
-                }
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                // Stats overview with staggered animation
-                StatsOverview(profile, isContentLoaded)
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                // Puzzle type stats
-                PuzzleTypeStats(profile, isContentLoaded)
-
-
-                Spacer(modifier = Modifier.height(24.dp))
+                PuzzleProgressSection(
+                    puzzleProgress = puzzleProgress,
+                    isContentLoaded = isContentLoaded
+                )
             }
         }
     }
 }
 
+
 @Composable
-fun ProfileHeader(profile: UserProfile?, isContentLoaded: Boolean) {
+fun ProfileHeader(
+    profile: UserProfile?,
+    isContentLoaded: Boolean
+) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp)
             .shadow(
                 elevation = 16.dp,
                 shape = RoundedCornerShape(16.dp),
                 spotColor = Color(0xFFFFD700)
             )
-            .scale(animateFloatAsState(
-                targetValue = if (isContentLoaded) 1f else 0.9f,
-                animationSpec = tween(durationMillis = 600)
-            ).value),
+            .scale(
+                animateFloatAsState(
+                    targetValue = if (isContentLoaded) 1f else 0.96f,
+                    animationSpec = tween(durationMillis = 600),
+                    label = "headerScale"
+                ).value
+            ),
         shape = RoundedCornerShape(16.dp)
     ) {
         Box(
@@ -195,19 +171,18 @@ fun ProfileHeader(profile: UserProfile?, isContentLoaded: Boolean) {
         ) {
             Column(
                 modifier = Modifier
-                    .padding(24.dp)
-                    .fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally
+                    .fillMaxWidth()
+                    .padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Profile Image with golden border
                 Box(
                     modifier = Modifier
                         .size(120.dp)
                         .border(
                             width = 3.dp,
                             brush = Brush.linearGradient(
-                                colors = listOf(Color(0xFFFFD700), Color(0xFFD4AF37)),
-                                tileMode = TileMode.Repeated
+                                colors = listOf(Color(0xFFFFD700), Color(0xFFD4AF37))
                             ),
                             shape = CircleShape
                         )
@@ -216,14 +191,17 @@ fun ProfileHeader(profile: UserProfile?, isContentLoaded: Boolean) {
                         .clip(CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
-                    if (!profile?.profileImageUri.isNullOrEmpty() && profile?.profileImageUri != "null") {
-                        // Use Coil's AsyncImage for better image loading
+                    val imageUri = profile?.profileImageUri
+                    if (!imageUri.isNullOrEmpty() && imageUri != "null" && imageUri.isNotBlank()) {
                         Image(
                             painter = rememberAsyncImagePainter(
-                                model = Uri.parse(profile?.profileImageUri)
+                                model = imageUri,
+                                error = painterResource(id = R.drawable.ic_launcher_foreground)
                             ),
                             contentDescription = "Profile Image",
-                            modifier = Modifier.fillMaxSize(),
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clip(CircleShape),
                             contentScale = ContentScale.Crop
                         )
                     } else {
@@ -236,31 +214,25 @@ fun ProfileHeader(profile: UserProfile?, isContentLoaded: Boolean) {
                     }
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
 
-                // Display name
                 Text(
-                    text = if (!profile?.displayName.isNullOrEmpty() && profile?.displayName != "Guest User") {
-                        profile?.displayName ?: "Guest"
+                    text = if (!profile?.displayName.isNullOrBlank() && profile?.displayName != "Guest User") {
+                        profile.displayName
                     } else {
-                        "Guest"
+                        "Guest User"
                     },
                     style = MaterialTheme.typography.headlineSmall.copy(
                         color = Color.White,
                         fontWeight = FontWeight.Bold
-                    ),
-                    modifier = Modifier.align(Alignment.CenterHorizontally)
+                    )
                 )
 
-                Spacer(modifier = Modifier.height(8.dp))
 
-                // Join date
                 Text(
-                    text = "Joined: ${profile?.joinDate?.toFormattedDate() ?: "Today"}",
-                    style = MaterialTheme.typography.bodySmall.copy(
+                    text = profile?.joinDate?.toFormattedJoinDate() ?: "—",
+                    style = MaterialTheme.typography.bodyMedium.copy(
                         color = Color(0xFFD4AF37)
-                    ),
-                    modifier = Modifier.align(Alignment.CenterHorizontally)
+                    )
                 )
             }
         }
@@ -268,27 +240,58 @@ fun ProfileHeader(profile: UserProfile?, isContentLoaded: Boolean) {
 }
 
 @Composable
-fun StatsOverview(profile: UserProfile?, isContentLoaded: Boolean) {
-    val items = listOf(
-        "Total Puzzles Solved" to (profile?.totalPuzzlesSolved?.toString() ?: "0"),
-        "Total Score" to (profile?.totalScore?.toString() ?: "0"),
-        "Accuracy" to "${profile?.averageAccuracy?.format(1) ?: "0"}%",
-        "Current Streak" to "${profile?.currentStreak ?: 0} days"
-    )
+fun PuzzleProgressSection(
+    puzzleProgress: List<PuzzleProgressData>,
+    isContentLoaded: Boolean
+) {
+    if (puzzleProgress.isEmpty()) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .shadow(
+                    elevation = 12.dp,
+                    shape = RoundedCornerShape(16.dp),
+                    spotColor = Color(0xFFFFD700)
+                ),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        brush = Brush.linearGradient(
+                            colors = listOf(Color(0xFF2C1810), Color(0xFF4A2C1D))
+                        )
+                    )
+                    .padding(24.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    "No puzzle progress yet. Start playing to see your stats!",
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        color = Color(0xFFD4AF37)
+                    )
+                )
+            }
+        }
+        return
+    }
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp)
             .shadow(
                 elevation = 12.dp,
                 shape = RoundedCornerShape(16.dp),
                 spotColor = Color(0xFFFFD700)
             )
-            .scale(animateFloatAsState(
-                targetValue = if (isContentLoaded) 1f else 0.9f,
-                animationSpec = tween(durationMillis = 600, delayMillis = 100)
-            ).value),
+            .scale(
+                animateFloatAsState(
+                    targetValue = if (isContentLoaded) 1f else 0.96f,
+                    animationSpec = tween(durationMillis = 600, delayMillis = 100),
+                    label = "progressScale"
+                ).value
+            ),
         shape = RoundedCornerShape(16.dp)
     ) {
         Box(
@@ -303,11 +306,12 @@ fun StatsOverview(profile: UserProfile?, isContentLoaded: Boolean) {
         ) {
             Column(
                 modifier = Modifier
-                    .padding(24.dp)
                     .fillMaxWidth()
+                    .padding(24.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 Text(
-                    "Overall Stats",
+                    "Puzzle Progress",
                     style = MaterialTheme.typography.headlineSmall.copy(
                         color = Color.White,
                         fontWeight = FontWeight.Bold
@@ -315,18 +319,14 @@ fun StatsOverview(profile: UserProfile?, isContentLoaded: Boolean) {
                     modifier = Modifier.align(Alignment.CenterHorizontally)
                 )
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
-                items.forEachIndexed { index, (label, value) ->
-                    StatItem(
-                        label = label,
-                        value = value,
+                puzzleProgress.forEachIndexed { index, progress ->
+                    PuzzleProgressItem(
+                        puzzleProgress = progress,
                         isContentLoaded = isContentLoaded,
                         delay = index * 100
                     )
-                    if (index < items.size - 1) {
-                        Spacer(modifier = Modifier.height(12.dp))
-                    }
                 }
             }
         }
@@ -334,214 +334,67 @@ fun StatsOverview(profile: UserProfile?, isContentLoaded: Boolean) {
 }
 
 @Composable
-fun StatItem(label: String, value: String, isContentLoaded: Boolean, delay: Int = 0) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp)
-            .alpha(animateFloatAsState(
-                targetValue = if (isContentLoaded) 1f else 0f,
-                animationSpec = tween(durationMillis = 400, delayMillis = delay)
-            ).value)
-            .offset(x = animateDpAsState(
-                targetValue = if (isContentLoaded) 0.dp else 20.dp,
-                animationSpec = tween(durationMillis = 400, delayMillis = delay)
-            ).value),
-        verticalAlignment = Alignment.CenterVertically
+fun PuzzleProgressItem(
+    puzzleProgress: PuzzleProgressData,
+    isContentLoaded: Boolean,
+    delay: Int = 0
+) {
+    val progress = if (puzzleProgress.totalCount > 0) {
+        puzzleProgress.solvedCount.toFloat() / puzzleProgress.totalCount.toFloat()
+    } else {
+        0f
+    }
+
+    val animatedProgress = animateFloatAsState(
+        targetValue = if (isContentLoaded) progress else 0f,
+        animationSpec = tween(durationMillis = 800, delayMillis = delay + 200),
+        label = "progress_${puzzleProgress.puzzleType}"
+    )
+
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Text(
-            text = "$label:",
-            style = MaterialTheme.typography.bodyMedium.copy(
-                color = Color.White
-            ),
-            modifier = Modifier.weight(1f)
-        )
-        Text(
-            text = value,
-            style = MaterialTheme.typography.bodyLarge.copy(
-                fontWeight = FontWeight.Bold,
-                color = Color(0xFFD4AF37)
-            )
-        )
-    }
-}
-
-@Composable
-fun PuzzleTypeStats(profile: UserProfile?, isContentLoaded: Boolean) {
-    val stats = profile?.getPuzzleStatsMap() ?: emptyMap()
-
-    if (stats.isNotEmpty()) {
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp)
-                .shadow(
-                    elevation = 12.dp,
-                    shape = RoundedCornerShape(16.dp),
-                    spotColor = Color(0xFFFFD700)
-                )
-                .scale(animateFloatAsState(
-                    targetValue = if (isContentLoaded) 1f else 0.9f,
-                    animationSpec = tween(durationMillis = 600, delayMillis = 200)
-                ).value),
-            shape = RoundedCornerShape(16.dp)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(
-                        brush = Brush.linearGradient(
-                            colors = listOf(Color(0xFF2C1810), Color(0xFF4A2C1D)),
-                            tileMode = TileMode.Repeated
-                        )
-                    )
-            ) {
-                Column(
-                    modifier = Modifier
-                        .padding(24.dp)
-                        .fillMaxWidth()
-                ) {
-                    Text(
-                        "Puzzle Type Stats",
-                        style = MaterialTheme.typography.headlineSmall.copy(
-                            color = Color.White,
-                            fontWeight = FontWeight.Bold
-                        ),
-                        modifier = Modifier.align(Alignment.CenterHorizontally)
-                    )
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    stats.entries.forEachIndexed { index, (type, typeStats) ->
-                        StatItem(
-                            label = type,
-                            value = "${typeStats.solved}/${typeStats.attempted} (${typeStats.accuracy.format(1)}%)",
-                            isContentLoaded = isContentLoaded,
-                            delay = 200 + index * 100
-                        )
-                        if (index < stats.size - 1) {
-                            Spacer(modifier = Modifier.height(8.dp))
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun AchievementsSection(achievements: List<Achievement>, isContentLoaded: Boolean) {
-    if (achievements.isNotEmpty()) {
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp)
-                .shadow(
-                    elevation = 12.dp,
-                    shape = RoundedCornerShape(16.dp),
-                    spotColor = Color(0xFFFFD700)
-                )
-                .scale(animateFloatAsState(
-                    targetValue = if (isContentLoaded) 1f else 0.9f,
-                    animationSpec = tween(durationMillis = 600, delayMillis = 300)
-                ).value),
-            shape = RoundedCornerShape(16.dp)
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(
-                        brush = Brush.linearGradient(
-                            colors = listOf(Color(0xFF2C1810), Color(0xFF4A2C1D)),
-                            tileMode = TileMode.Repeated
-                        )
-                    )
-            ) {
-                Column(
-                    modifier = Modifier
-                        .padding(24.dp)
-                        .fillMaxWidth()
-                ) {
-                    Text(
-                        "Achievements",
-                        style = MaterialTheme.typography.headlineSmall.copy(
-                            color = Color.White,
-                            fontWeight = FontWeight.Bold
-                        ),
-                        modifier = Modifier.align(Alignment.CenterHorizontally)
-                    )
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    achievements.forEachIndexed { index, achievement ->
-                        AchievementItem(
-                            achievement = achievement,
-                            isContentLoaded = isContentLoaded,
-                            delay = 300 + index * 100
-                        )
-                        if (index < achievements.size - 1) {
-                            Spacer(modifier = Modifier.height(12.dp))
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun AchievementItem(achievement: Achievement, isContentLoaded: Boolean, delay: Int = 0) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp)
-            .alpha(animateFloatAsState(
-                targetValue = if (isContentLoaded) 1f else 0f,
-                animationSpec = tween(durationMillis = 400, delayMillis = delay)
-            ).value)
-            .offset(x = animateDpAsState(
-                targetValue = if (isContentLoaded) 0.dp else 20.dp,
-                animationSpec = tween(durationMillis = 400, delayMillis = delay)
-            ).value),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(
-            imageVector = Icons.Default.Star,
-            contentDescription = "Achievement",
-            tint = if (achievement.unlocked) Color(0xFFFFD700) else Color(0xFF666666),
-            modifier = Modifier.size(28.dp)
-        )
-
-        Spacer(modifier = Modifier.size(16.dp))
-
-        Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = achievement.title,
+                text = puzzleProgress.puzzleType,
                 style = MaterialTheme.typography.bodyLarge.copy(
-                    color = if (achievement.unlocked) Color.White else Color(0xFFAAAAAA),
+                    color = Color.White,
                     fontWeight = FontWeight.Medium
                 )
             )
+
             Text(
-                text = achievement.description,
-                style = MaterialTheme.typography.bodySmall.copy(
-                    color = if (achievement.unlocked) Color(0xFFD4AF37) else Color(0xFF888888)
+                text = "${puzzleProgress.solvedCount} / ${puzzleProgress.totalCount}",
+                style = MaterialTheme.typography.bodyMedium.copy(
+                    color = Color(0xFFD4AF37),
+                    fontWeight = FontWeight.Bold
                 )
             )
-            if (achievement.target > 1) {
-                Text(
-                    text = "${achievement.progress}/${achievement.target}",
-                    style = MaterialTheme.typography.bodySmall.copy(
-                        color = Color(0xFFFFD700)
+        }
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(8.dp)
+                .clip(RoundedCornerShape(4.dp))
+                .background(Color(0xFF3D3D3D))
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .fillMaxWidth(animatedProgress.value)
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(
+                        brush = Brush.horizontalGradient(
+                            colors = listOf(Color(0xFFFFD700), Color(0xFFD4AF37))
+                        )
                     )
-                )
-            }
+            )
         }
     }
 }
-
-// Helper extension for alpha animation
-//@Composable
-//private fun Modifier.alpha(alpha: Float): Modifier = this.then(
-//    graphicsLayer(alpha = alpha)
-//)

@@ -1,13 +1,22 @@
 package com.example.neuronest.puzzlelevels
 
-import androidx.compose.animation.core.*
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Timer
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -16,9 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 
-/**
- * Timer composable to display elapsed time during puzzle gameplay
- */
+
 @Composable
 fun PuzzleTimer(
     isRunning: Boolean,
@@ -32,7 +39,7 @@ fun PuzzleTimer(
         if (isRunning) {
             startTime = System.currentTimeMillis()
             while (isRunning) {
-                delay(1000L) // Update every second
+                delay(1000L)
                 elapsedTime = System.currentTimeMillis() - startTime
                 onTimeUpdate(elapsedTime)
             }
@@ -68,33 +75,6 @@ fun PuzzleTimer(
     }
 }
 
-/**
- * Compact timer for smaller spaces
- */
-@Composable
-fun CompactTimer(
-    elapsedTimeMs: Long,
-    modifier: Modifier = Modifier
-) {
-    Row(
-        modifier = modifier,
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(4.dp)
-    ) {
-        Icon(
-            imageVector = Icons.Default.Timer,
-            contentDescription = "Timer",
-            tint = Color(0xFFD4AF37),
-            modifier = Modifier.size(16.dp)
-        )
-        Text(
-            text = formatTime(elapsedTimeMs),
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Medium,
-            color = Color.White
-        )
-    }
-}
 
 private fun formatTime(timeMs: Long): String {
     val seconds = (timeMs / 1000) % 60
